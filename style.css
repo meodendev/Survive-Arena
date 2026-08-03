@@ -18,24 +18,24 @@ body {
     touch-action: none;
 }
 
-/* LANDSCAPE MODE - MÀN HÌNH NGANG */
+/* ===== LANDSCAPE MODE - QUAN TRỌNG ===== */
 #gameWrapper {
     position: relative;
     width: 100vw;
     height: 100vh;
-    max-width: 100vh;
-    max-height: 100vw;
+    max-width: 100vh;  /* Giới hạn chiều rộng theo chiều cao */
+    max-height: 100vw; /* Giới hạn chiều cao theo chiều rộng */
     background: #1a1a2e;
     overflow: hidden;
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
     touch-action: none;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 9; /* Tỷ lệ màn hình ngang */
 }
 
 canvas {
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
     background: #2d4059;
     touch-action: none;
     position: absolute;
@@ -160,7 +160,7 @@ canvas {
 }
 #weaponDisplay {
     position: absolute;
-    bottom: 52%;
+    bottom: 50%;
     left: 50%;
     transform: translateX(-50%);
     color: #fff;
@@ -218,7 +218,7 @@ canvas {
     background: linear-gradient(90deg, #44aaff, #4ecdc4);
 }
 
-/* Controls - NGANG */
+/* ===== CONTROLS - LANDSCAPE ===== */
 #controls {
     position: absolute;
     bottom: 0;
@@ -303,6 +303,7 @@ canvas {
     background: rgba(255, 255, 255, 0.25);
 }
 
+/* P1 - Left */
 .ctrl-group.p1 .action-btn.shoot {
     background: rgba(255, 50, 50, 0.35);
     border-color: rgba(255, 50, 50, 0.5);
@@ -321,6 +322,7 @@ canvas {
     font-size: clamp(12px, 2vw, 18px);
 }
 
+/* P2 - Right */
 .ctrl-group.p2 .action-btn.shoot {
     background: rgba(70, 180, 255, 0.35);
     border-color: rgba(70, 180, 255, 0.5);
@@ -339,6 +341,7 @@ canvas {
     font-size: clamp(12px, 2vw, 18px);
 }
 
+/* Restart & Winner */
 #restartBtn {
     position: absolute;
     top: 50%;
@@ -378,4 +381,18 @@ canvas {
     padding: clamp(8px, 1.5vh, 16px) clamp(16px, 3vw, 32px);
     border-radius: 16px;
     z-index: 10;
+}
+
+/* Responsive - Quan trọng cho ngang */
+@media (max-aspect-ratio: 16/9) {
+    #gameWrapper {
+        width: 100vw;
+        height: calc(100vw * 9 / 16);
+    }
+}
+@media (min-aspect-ratio: 16/9) {
+    #gameWrapper {
+        width: calc(100vh * 16 / 9);
+        height: 100vh;
+    }
 }
