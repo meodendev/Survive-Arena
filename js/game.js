@@ -50,9 +50,9 @@ export class Game {
         this.mode = 'local';
         this.running = false;
         
-        // Create players
-        this.p1 = new Player(1, 120, height / 2, '#ff6b6b', 'left');
-        this.p2 = new Player(2, width - 120, height / 2, '#4ecdc4', 'right');
+        // Create players - VỊ TRÍ CHO MÀN HÌNH NGANG
+        this.p1 = new Player(1, 150, height / 2, '#ff6b6b', 'left');
+        this.p2 = new Player(2, width - 150, height / 2, '#4ecdc4', 'right');
         this.p1.angle = 0;
         this.p2.angle = Math.PI;
         this.p1.weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'smg', 'ak'];
@@ -68,6 +68,8 @@ export class Game {
             this.p2.isBot = true;
             this.p2.weapons = ['pistol', 'rifle', 'smg'];
             this.p2.weapon = 'pistol';
+        } else {
+            this.p2.isBot = false;
         }
         this.initRound();
     }
@@ -87,9 +89,11 @@ export class Game {
         this.zone.radius = 280;
         this.zone.targetRadius = 280;
         this.zone.phase = 0;
+        this.zone.x = this.W / 2;
+        this.zone.y = this.H / 2;
         
-        // Reset players
-        this.p1.x = 120;
+        // Reset players - VỊ TRÍ CHO MÀN HÌNH NGANG
+        this.p1.x = 150;
         this.p1.y = this.H / 2;
         this.p1.hp = CONSTANTS.MAX_HP;
         this.p1.alive = true;
@@ -100,7 +104,7 @@ export class Game {
         this.p1.angle = 0;
         this.p1.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false };
         
-        this.p2.x = this.W - 120;
+        this.p2.x = this.W - 150;
         this.p2.y = this.H / 2;
         this.p2.hp = CONSTANTS.MAX_HP;
         this.p2.alive = true;
@@ -113,6 +117,8 @@ export class Game {
         
         if (this.mode === 'bot') {
             this.p2.isBot = true;
+            this.p2.weapons = ['pistol', 'rifle', 'smg'];
+            this.p2.weapon = 'pistol';
         }
         
         this.players.push(this.p1, this.p2);
@@ -125,8 +131,10 @@ export class Game {
         this.dom.weaponDisplay.textContent = '🔫 ' + this.p1.getWeapon().name;
         
         // Reset knobs
-        document.getElementById('knobP1').style.transform = 'translate(-50%, -50%)';
-        document.getElementById('knobP2').style.transform = 'translate(-50%, -50%)';
+        const knob1 = document.getElementById('knobP1');
+        const knob2 = document.getElementById('knobP2');
+        if (knob1) knob1.style.transform = 'translate(-50%, -50%)';
+        if (knob2) knob2.style.transform = 'translate(-50%, -50%)';
     }
     
     restart() {
@@ -361,6 +369,9 @@ export class Game {
         };
         if (weaponMap[item.type]) {
             player.addWeapon(weaponMap[item.type]);
+            if (player.id === 1) {
+                this.dom.weaponDisplay.textContent = '🔫 ' + player.getWeapon().name;
+            }
             return;
         }
         switch (item.type) {
@@ -410,7 +421,6 @@ export class Game {
             p1.input.dy = dy1 / len1;
         }
         if (key === ' ' || key === 'Space') {
-            e.preventDefault();
             p1.input.shoot = true;
         }
         if (key === 'q' || key === 'Q') p1.input.bomb = true;
@@ -431,7 +441,6 @@ export class Game {
             p2.input.dy = dy2 / len2;
         }
         if (key === 'Enter') {
-            e.preventDefault();
             p2.input.shoot = true;
         }
         if (key === '.') p2.input.bomb = true;
