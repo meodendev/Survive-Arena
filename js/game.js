@@ -4,8 +4,8 @@ import { createMap, createBushes, spawnItems, checkCollision, rectCircleCollisio
 import { updateUI, showWinner, showRoundWinner } from './ui.js';
 import { spawnParticles } from './particle.js';
 
-export const W = 420;
-export const H = 746;
+export const W = 900;
+export const H = 500;
 
 export const CONSTANTS = {
     PLAYER_RADIUS: 14,
