@@ -1,0 +1,63 @@
+export const WEAPONS = {
+    pistol: {
+        name: 'Pistol',
+        damage: 10,
+        speed: 6,
+        cooldown: 0.25,
+        spread: 0.05,
+        bullets: 1,
+        range: 400,
+        color: '#ffdd44'
+    },
+    shotgun: {
+        name: 'Shotgun',
+        damage: 8,
+        speed: 7,
+        cooldown: 0.5,
+        spread: 0.2,
+        bullets: 5,
+        range: 200,
+        color: '#ff8833'
+    },
+    rifle: {
+        name: 'Rifle',
+        damage: 7,
+        speed: 8,
+        cooldown: 0.12,
+        spread: 0.04,
+        bullets: 1,
+        range: 500,
+        color: '#33ff88'
+    },
+    sniper: {
+        name: 'Sniper',
+        damage: 25,
+        speed: 12,
+        cooldown: 0.8,
+        spread: 0.01,
+        bullets: 1,
+        range: 700,
+        color: '#ff33ff',
+        pierce: true
+    },
+    smg: {
+        name: 'SMG',
+        damage: 6,
+        speed: 7,
+        cooldown: 0.08,
+        spread: 0.12,
+        bullets: 1,
+        range: 300,
+        color: '#33ddff'
+    },
+    ak: {
+        name: 'AK-47',
+        damage: 14,
+        speed: 7,
+        cooldown: 0.15,
+        spread: 0.1,
+        bullets: 1,
+        range: 450,
+        color: '#ff6633'
+    }
+};
