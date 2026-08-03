@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Survive Arena</title>
+    <title>Survive Arena - Ngang</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,15 +13,14 @@
         <!-- MENU -->
         <div id="menu">
             <h1>⚔️ SURVIVE ARENA</h1>
-            <div class="subtitle">Battle Royale trên điện thoại</div>
+            <div class="subtitle">Battle Royale - Màn hình ngang</div>
             <button class="menu-btn primary" id="btnLocal">👥 2 Người cùng máy</button>
             <button class="menu-btn" id="btnBot">🤖 Đấu với Bot</button>
             <button class="menu-btn" id="btnOnline">🌐 Online (Coming Soon)</button>
             <div class="controls-hint">
                 <kbd>W A S D</kbd> P1 · <kbd>⬆ ⬇ ⬅ ➡</kbd> P2<br>
                 <kbd>Space</kbd> P1 · <kbd>Enter</kbd> P2 bắn<br>
-                <kbd>Q</kbd> P1 · <kbd>.</kbd> P2 bom<br>
-                <kbd>E</kbd> P1 · <kbd>/</kbd> P2 đổi súng
+                <kbd>Q</kbd> P1 · <kbd>.</kbd> P2 bom
             </div>
         </div>
 
@@ -47,28 +46,31 @@
             <button id="restartBtn">🔄 Đấu lại</button>
         </div>
 
-        <!-- Controls -->
+        <!-- Controls - NGANG -->
         <div id="controls">
+            <!-- Player 1 - Bên trái -->
             <div class="ctrl-group p1">
                 <div class="joystick-area" id="joyP1">
                     <div class="knob" id="knobP1"></div>
                 </div>
                 <div class="btn-row">
-                    <div class="action-btn weapon" id="weaponP1">🔫</div>
                     <div class="action-btn shoot" id="shootP1">🔥</div>
                     <div class="action-btn bomb" id="bombP1">💣</div>
                     <div class="action-btn speed" id="speedP1">⚡</div>
+                    <div class="action-btn weapon" id="weaponP1">🔫</div>
                 </div>
             </div>
+
+            <!-- Player 2 - Bên phải -->
             <div class="ctrl-group p2">
-                <div class="joystick-area" id="joyP2">
-                    <div class="knob" id="knobP2"></div>
-                </div>
                 <div class="btn-row">
+                    <div class="action-btn weapon" id="weaponP2">🔫</div>
                     <div class="action-btn speed" id="speedP2">⚡</div>
                     <div class="action-btn bomb" id="bombP2">💣</div>
                     <div class="action-btn shoot" id="shootP2">🔥</div>
-                    <div class="action-btn weapon" id="weaponP2">🔫</div>
+                </div>
+                <div class="joystick-area" id="joyP2">
+                    <div class="knob" id="knobP2"></div>
                 </div>
             </div>
         </div>
