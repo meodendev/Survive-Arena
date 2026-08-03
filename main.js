@@ -4,7 +4,7 @@ import { setupJoystick, setupButton } from './js/joystick.js';
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// KÍCH THƯỚC MÀN HÌNH NGANG (16:9)
+// KÍCH THƯỚC MÀN HÌNH NGANG
 const W = 900;
 const H = 500;
 canvas.width = W;
