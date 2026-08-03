@@ -4,8 +4,9 @@ import { setupJoystick, setupButton } from './js/joystick.js';
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const W = 420;
-const H = 746;
+// KÍCH THƯỚC MÀN HÌNH NGANG (16:9)
+const W = 900;
+const H = 500;
 canvas.width = W;
 canvas.height = H;
 
@@ -21,10 +22,9 @@ const menu = document.getElementById('menu');
 const weaponDisplay = document.getElementById('weaponDisplay');
 const controls = document.getElementById('controls');
 
-// DOM refs object
 const dom = { hpP1, hpP2, scoreP1, scoreP2, roundDisplay, winnerMsg, restartBtn, weaponDisplay };
 
-// Khởi tạo Game
+// Game
 const game = new Game(W, H, dom, ctx);
 
 // Setup controls
@@ -39,7 +39,7 @@ setupButton('bombP2', game.p2, 'bomb');
 setupButton('speedP2', game.p2, 'speed');
 setupButton('weaponP2', game.p2, 'weapon');
 
-// Menu events
+// Menu
 document.getElementById('btnLocal').addEventListener('click', () => {
     game.start('local');
     menu.style.display = 'none';
@@ -61,11 +61,14 @@ restartBtn.addEventListener('click', () => {
     game.restart();
 });
 
-// PC Keyboard
+// Keyboard
 const keys = {};
 document.addEventListener('keydown', (e) => {
     const key = e.key;
     keys[key] = true;
+    if (key === ' ' || key === 'Space' || key === 'Enter') {
+        e.preventDefault();
+    }
     game.handleKeyDown(key, keys);
 });
 
