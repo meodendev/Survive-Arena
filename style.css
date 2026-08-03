@@ -18,7 +18,7 @@ body {
     touch-action: none;
 }
 
-/* ===== LANDSCAPE MODE - QUAN TRỌNG ===== */
+/* ===== LANDSCAPE MODE ===== */
 #gameWrapper {
     position: relative;
     width: 100vw;
@@ -123,6 +123,7 @@ canvas {
     z-index: 2;
 }
 
+/* TOP BAR - SỬA LỖI */
 #topBar {
     position: absolute;
     top: clamp(4px, 0.8vh, 10px);
@@ -133,6 +134,7 @@ canvas {
     justify-content: space-between;
     align-items: center;
     pointer-events: none;
+    z-index: 5;
 }
 #topBar .score {
     color: #fff;
@@ -158,9 +160,11 @@ canvas {
     padding: 2px clamp(10px, 1.5vw, 20px);
     border-radius: 12px;
 }
+
+/* WEAPON DISPLAY */
 #weaponDisplay {
     position: absolute;
-    bottom: 50%;
+    top: clamp(55px, 7vh, 80px);
     left: 50%;
     transform: translateX(-50%);
     color: #fff;
@@ -170,8 +174,10 @@ canvas {
     border-radius: 12px;
     pointer-events: none;
     display: none;
+    z-index: 5;
 }
 
+/* HP CONTAINER */
 #hpContainer {
     position: absolute;
     top: clamp(30px, 4vh, 50px);
@@ -182,6 +188,7 @@ canvas {
     justify-content: space-between;
     gap: clamp(8px, 2vw, 20px);
     pointer-events: none;
+    z-index: 5;
 }
 .hp-wrap {
     flex: 1;
@@ -224,12 +231,12 @@ canvas {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 45%;
+    height: 55%;
     pointer-events: none;
     z-index: 3;
     display: none;
     justify-content: space-between;
-    padding: 0 clamp(8px, 2vw, 20px) clamp(8px, 1.5vh, 20px) clamp(8px, 2vw, 20px);
+    padding: 0 clamp(8px, 2vw, 20px) clamp(8px, 2vh, 25px) clamp(8px, 2vw, 20px);
 }
 
 .ctrl-group {
@@ -239,25 +246,25 @@ canvas {
     align-items: center;
     justify-content: flex-end;
     width: 40%;
-    gap: clamp(4px, 0.8vh, 10px);
+    gap: clamp(6px, 1vh, 14px);
 }
 
 /* Joystick */
 .joystick-area {
     width: 100%;
-    max-width: clamp(80px, 14vw, 160px);
+    max-width: clamp(100px, 16vw, 160px);
     aspect-ratio: 1/1;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 80%);
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.15);
+    border: 3px solid rgba(255, 255, 255, 0.2);
     position: relative;
     touch-action: none;
     cursor: pointer;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 .joystick-area .knob {
-    width: 36%;
-    height: 36%;
+    width: 38%;
+    height: 38%;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.2) 100%);
     border-radius: 50%;
     position: absolute;
@@ -271,7 +278,7 @@ canvas {
 
 .btn-row {
     display: flex;
-    gap: clamp(4px, 0.8vw, 10px);
+    gap: clamp(6px, 1vw, 14px);
     width: 100%;
     justify-content: center;
     flex-wrap: wrap;
@@ -279,19 +286,19 @@ canvas {
 
 .action-btn {
     pointer-events: auto;
-    width: clamp(36px, 6vw, 60px);
-    height: clamp(36px, 6vw, 60px);
+    width: clamp(40px, 6vw, 60px);
+    height: clamp(40px, 6vw, 60px);
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    font-size: clamp(14px, 2.5vw, 24px);
+    font-size: clamp(16px, 2.5vw, 24px);
     display: flex;
     align-items: center;
     justify-content: center;
     touch-action: none;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     transition: transform 0.05s;
     font-weight: bold;
@@ -303,42 +310,42 @@ canvas {
     background: rgba(255, 255, 255, 0.25);
 }
 
-/* P1 - Left */
+/* P1 Colors */
 .ctrl-group.p1 .action-btn.shoot {
-    background: rgba(255, 50, 50, 0.35);
-    border-color: rgba(255, 50, 50, 0.5);
+    background: rgba(255, 50, 50, 0.4);
+    border-color: rgba(255, 50, 50, 0.6);
 }
 .ctrl-group.p1 .action-btn.bomb {
-    background: rgba(255, 150, 0, 0.35);
-    border-color: rgba(255, 150, 0, 0.5);
+    background: rgba(255, 150, 0, 0.4);
+    border-color: rgba(255, 150, 0, 0.6);
 }
 .ctrl-group.p1 .action-btn.speed {
-    background: rgba(50, 200, 255, 0.35);
-    border-color: rgba(50, 200, 255, 0.5);
+    background: rgba(50, 200, 255, 0.4);
+    border-color: rgba(50, 200, 255, 0.6);
 }
 .ctrl-group.p1 .action-btn.weapon {
-    background: rgba(150, 50, 255, 0.35);
-    border-color: rgba(150, 50, 255, 0.5);
-    font-size: clamp(12px, 2vw, 18px);
+    background: rgba(150, 50, 255, 0.4);
+    border-color: rgba(150, 50, 255, 0.6);
+    font-size: clamp(14px, 2vw, 20px);
 }
 
-/* P2 - Right */
+/* P2 Colors */
 .ctrl-group.p2 .action-btn.shoot {
-    background: rgba(70, 180, 255, 0.35);
-    border-color: rgba(70, 180, 255, 0.5);
+    background: rgba(70, 180, 255, 0.4);
+    border-color: rgba(70, 180, 255, 0.6);
 }
 .ctrl-group.p2 .action-btn.bomb {
-    background: rgba(255, 150, 0, 0.35);
-    border-color: rgba(255, 150, 0, 0.5);
+    background: rgba(255, 150, 0, 0.4);
+    border-color: rgba(255, 150, 0, 0.6);
 }
 .ctrl-group.p2 .action-btn.speed {
-    background: rgba(50, 200, 255, 0.35);
-    border-color: rgba(50, 200, 255, 0.5);
+    background: rgba(50, 200, 255, 0.4);
+    border-color: rgba(50, 200, 255, 0.6);
 }
 .ctrl-group.p2 .action-btn.weapon {
-    background: rgba(150, 50, 255, 0.35);
-    border-color: rgba(150, 50, 255, 0.5);
-    font-size: clamp(12px, 2vw, 18px);
+    background: rgba(150, 50, 255, 0.4);
+    border-color: rgba(150, 50, 255, 0.6);
+    font-size: clamp(14px, 2vw, 20px);
 }
 
 /* Restart & Winner */
@@ -398,29 +405,22 @@ canvas {
     -webkit-touch-action: none !important;
 }
 
-.action-btn:active {
-    transform: scale(0.8);
-    background: rgba(255, 255, 255, 0.25);
-}
-
-/* Tăng kích thước vùng chạm cho iPhone */
 .joystick-area {
-    min-width: 80px;
-    min-height: 80px;
+    min-width: 60px;
+    min-height: 60px;
 }
 
 .action-btn {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 40px;
+    min-height: 40px;
 }
 
-/* Fix cho Safari iOS */
 #gameWrapper {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
 }
 
-/* Responsive */
+/* ===== RESPONSIVE ===== */
 @media (max-aspect-ratio: 16/9) {
     #gameWrapper {
         width: 100vw;
@@ -434,51 +434,86 @@ canvas {
     }
 }
 
-/* Responsive cho màn hình nhỏ */
+/* Mobile small */
 @media (max-width: 600px) {
     .joystick-area {
-        max-width: 100px;
-        min-width: 60px;
-        min-height: 60px;
+        max-width: 90px;
+        min-width: 50px;
+        min-height: 50px;
     }
     .action-btn {
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         font-size: 14px;
-        min-width: 36px;
-        min-height: 36px;
+        min-width: 34px;
+        min-height: 34px;
     }
     .btn-row {
         gap: 4px;
     }
     #controls {
-        height: 40%;
+        height: 50%;
     }
 }
 
 @media (max-height: 400px) {
     .joystick-area {
-        max-width: 70px;
-        min-width: 50px;
-        min-height: 50px;
+        max-width: 60px;
+        min-width: 40px;
+        min-height: 40px;
     }
     .action-btn {
-        width: 30px;
-        height: 30px;
+        width: 28px;
+        height: 28px;
         font-size: 11px;
-        min-width: 30px;
-        min-height: 30px;
+        min-width: 28px;
+        min-height: 28px;
     }
     #controls {
-        height: 38%;
+        height: 45%;
     }
     #hpContainer {
-        top: 25px;
+        top: 20px;
     }
     #topBar .score {
-        font-size: 10px;
+        font-size: 9px;
     }
     #roundDisplay {
-        font-size: 10px;
+        font-size: 9px;
     }
+}
+
+/* ===== SAFE AREA CHO IPHONE ===== */
+@supports (padding: max(0px)) {
+    #controls {
+        padding-bottom: max(clamp(8px, 2vh, 25px), env(safe-area-inset-bottom));
+        padding-left: max(clamp(8px, 2vw, 20px), env(safe-area-inset-left));
+        padding-right: max(clamp(8px, 2vw, 20px), env(safe-area-inset-right));
+    }
+}
+
+/* ===== POPUPS ===== */
+#shopPopup, #statsPopup, #leaderboardPopup, #settingsPopup, #upgradePopup {
+    border-radius: 16px;
+}
+
+#shopPopup > div, #statsPopup > div, #leaderboardPopup > div, #settingsPopup > div, #upgradePopup > div {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Scrollbar styling */
+#shopPopup ::-webkit-scrollbar,
+#leaderboardPopup ::-webkit-scrollbar {
+    width: 4px;
+}
+#shopPopup ::-webkit-scrollbar-track,
+#leaderboardPopup ::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+}
+#shopPopup ::-webkit-scrollbar-thumb,
+#leaderboardPopup ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
 }
