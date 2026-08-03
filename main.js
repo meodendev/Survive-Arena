@@ -200,7 +200,6 @@ function renderShop() {
         statsContainer.appendChild(div);
     }
     
-    // Event listeners cho stat buttons
     document.querySelectorAll('.buy-stat-btn').forEach(btn => {
         btn.onclick = () => {
             const result = buyStatBoost(btn.dataset.id);
