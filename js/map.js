@@ -1,29 +1,42 @@
 export function createMap(W, H) {
     return [
-        { x: 150, y: 150, w: 35, h: 35, type: 'box' },
-        { x: 235, y: 150, w: 35, h: 35, type: 'box' },
-        { x: 150, y: 235, w: 35, h: 35, type: 'box' },
-        { x: W - 185, y: 150, w: 35, h: 35, type: 'box' },
-        { x: W - 270, y: 150, w: 35, h: 35, type: 'box' },
-        { x: W - 185, y: 235, w: 35, h: 35, type: 'box' },
-        { x: 90, y: 490, w: 50, h: 30, type: 'rock' },
-        { x: W - 140, y: 490, w: 50, h: 30, type: 'rock' },
-        { x: 190, y: 390, w: 25, h: 55, type: 'wall' },
-        { x: W - 215, y: 390, w: 25, h: 55, type: 'wall' },
-        { x: W / 2 - 18, y: 340, w: 36, h: 36, type: 'box' },
-        { x: 80, y: 640, w: 40, h: 25, type: 'rock' },
-        { x: W - 120, y: 640, w: 40, h: 25, type: 'rock' },
+        // Hàng trên
+        { x: 100, y: 70, w: 40, h: 40, type: 'box' },
+        { x: 200, y: 70, w: 40, h: 40, type: 'box' },
+        { x: 300, y: 70, w: 40, h: 40, type: 'box' },
+        { x: W - 140, y: 70, w: 40, h: 40, type: 'box' },
+        { x: W - 240, y: 70, w: 40, h: 40, type: 'box' },
+        { x: W - 340, y: 70, w: 40, h: 40, type: 'box' },
+        
+        // Hàng giữa
+        { x: W / 2 - 20, y: 190, w: 40, h: 40, type: 'box' },
+        { x: 80, y: 190, w: 50, h: 30, type: 'rock' },
+        { x: W - 130, y: 190, w: 50, h: 30, type: 'rock' },
+        
+        // Tường
+        { x: 160, y: 310, w: 25, h: 55, type: 'wall' },
+        { x: W - 185, y: 310, w: 25, h: 55, type: 'wall' },
+        
+        // Hàng dưới
+        { x: 100, y: 390, w: 40, h: 40, type: 'box' },
+        { x: 200, y: 390, w: 40, h: 40, type: 'box' },
+        { x: W - 140, y: 390, w: 40, h: 40, type: 'box' },
+        { x: W - 240, y: 390, w: 40, h: 40, type: 'box' },
+        
+        // Đá
+        { x: W / 2 - 80, y: 370, w: 60, h: 30, type: 'rock' },
+        { x: W / 2 + 20, y: 370, w: 60, h: 30, type: 'rock' },
     ];
 }
 
 export function createBushes(W, H) {
     return [
-        { x: 70, y: 290, w: 45, h: 28 },
-        { x: W - 115, y: 290, w: 45, h: 28 },
-        { x: 50, y: 570, w: 45, h: 28 },
-        { x: W - 95, y: 570, w: 45, h: 28 },
-        { x: W / 2 - 28, y: 250, w: 56, h: 28 },
-        { x: W / 2 - 28, y: 560, w: 56, h: 28 },
+        { x: 60, y: 130, w: 50, h: 28 },
+        { x: W - 110, y: 130, w: 50, h: 28 },
+        { x: 60, y: 350, w: 50, h: 28 },
+        { x: W - 110, y: 350, w: 50, h: 28 },
+        { x: W / 2 - 40, y: 130, w: 80, h: 28 },
+        { x: W / 2 - 40, y: 350, w: 80, h: 28 },
     ];
 }
 
@@ -34,8 +47,8 @@ export function spawnItems(game, count) {
         let x, y, valid;
         let attempts = 0;
         do {
-            x = 40 + Math.random() * (game.W - 80);
-            y = 40 + Math.random() * (game.H - 80);
+            x = 50 + Math.random() * (game.W - 100);
+            y = 50 + Math.random() * (game.H - 100);
             valid = true;
             for (const p of game.players) {
                 if (Math.hypot(x - p.x, y - p.y) < 60) valid = false;
