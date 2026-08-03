@@ -3,6 +3,8 @@ import { WEAPONS } from './weapon.js';
 import { createMap, createBushes, spawnItems, checkCollision, rectCircleCollision } from './map.js';
 import { updateUI, showWinner, showRoundWinner } from './ui.js';
 import { spawnParticles } from './particle.js';
+import { addCoins, addExp, loadData, saveData, getStats } from './save.js';
+import { addLeaderboardEntry } from './leaderboard.js';
 
 export const W = 900;
 export const H = 500;
@@ -50,7 +52,11 @@ export class Game {
         this.mode = 'local';
         this.running = false;
         
-        // Create players - VỊ TRÍ CHO MÀN HÌNH NGANG
+        // Lấy stats từ save
+        const stats = getStats();
+        this.baseStats = stats;
+        
+        // Create players
         this.p1 = new Player(1, 150, height / 2, '#ff6b6b', 'left');
         this.p2 = new Player(2, width - 150, height / 2, '#4ecdc4', 'right');
         this.p1.angle = 0;
@@ -59,6 +65,24 @@ export class Game {
         this.p1.weapon = 'pistol';
         this.p2.weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'smg', 'ak'];
         this.p2.weapon = 'pistol';
+        
+        // Áp dụng stats
+        this.applyStats();
+    }
+    
+    applyStats() {
+        const stats = getStats();
+        this.p1.maxHp = stats.hp;
+        this.p1.hp = stats.hp;
+        this.p1.damage = stats.damage;
+        this.p1.speed = stats.speed;
+        this.p1.bombDamage = stats.bombDamage;
+        
+        this.p2.maxHp = stats.hp;
+        this.p2.hp = stats.hp;
+        this.p2.damage = stats.damage;
+        this.p2.speed = stats.speed;
+        this.p2.bombDamage = stats.bombDamage;
     }
     
     start(mode) {
@@ -92,10 +116,10 @@ export class Game {
         this.zone.x = this.W / 2;
         this.zone.y = this.H / 2;
         
-        // Reset players - VỊ TRÍ CHO MÀN HÌNH NGANG
+        // Reset players
         this.p1.x = 150;
         this.p1.y = this.H / 2;
-        this.p1.hp = CONSTANTS.MAX_HP;
+        this.p1.hp = this.p1.maxHp;
         this.p1.alive = true;
         this.p1.shield = 0;
         this.p1.speedBoost = 0;
@@ -106,7 +130,7 @@ export class Game {
         
         this.p2.x = this.W - 150;
         this.p2.y = this.H / 2;
-        this.p2.hp = CONSTANTS.MAX_HP;
+        this.p2.hp = this.p2.maxHp;
         this.p2.alive = true;
         this.p2.shield = 0;
         this.p2.speedBoost = 0;
@@ -145,6 +169,7 @@ export class Game {
         } else {
             this.round++;
         }
+        this.applyStats();
         this.initRound();
         this.dom.winnerMsg.style.display = 'none';
         this.dom.restartBtn.style.display = 'none';
@@ -257,7 +282,6 @@ export class Game {
             b.x += b.vx * dt * 60;
             b.y += b.vy * dt * 60;
             
-            // Bomb collision with obstacles
             for (const o of this.obstacles) {
                 if (rectCircleCollision(o.x, o.y, o.w, o.h, b.x, b.y, b.radius)) {
                     b.vx = 0;
@@ -317,7 +341,7 @@ export class Game {
                 radius: CONSTANTS.BULLET_RADIUS,
                 ownerId: player.id,
                 life: (weapon.range || 400) / (weapon.speed || CONSTANTS.BULLET_SPEED) / 60,
-                damage: weapon.damage || CONSTANTS.BULLET_DAMAGE,
+                damage: player.damage || CONSTANTS.BULLET_DAMAGE,
                 pierce: weapon.pierce || false,
             });
         }
@@ -342,7 +366,7 @@ export class Game {
             if (!p.alive) continue;
             const dist = Math.hypot(bomb.x - p.x, bomb.y - p.y);
             if (dist < CONSTANTS.BOMB_BLAST_RADIUS) {
-                const dmg = CONSTANTS.BOMB_DAMAGE * (1 - dist / CONSTANTS.BOMB_BLAST_RADIUS);
+                const dmg = (p.bombDamage || CONSTANTS.BOMB_DAMAGE) * (1 - dist / CONSTANTS.BOMB_BLAST_RADIUS);
                 p.takeDamage(Math.round(dmg));
                 if (!p.alive) this.checkRoundEnd();
             }
@@ -392,8 +416,39 @@ export class Game {
         if (alive.length === 1) {
             this.state = 'roundEnd';
             this.winner = alive[0];
+            
+            // Tính thưởng
+            const isP1Win = this.winner.id === 1;
+            const kills = isP1Win ? this.score1 : this.score2;
+            
+            const coinReward = isP1Win ? 100 : 30;
+            const expReward = isP1Win ? 50 : 20;
+            const killBonus = kills * 10;
+            
+            const totalCoins = coinReward + killBonus;
+            const totalExp = expReward + kills * 5;
+            
+            addCoins(totalCoins);
+            const levelData = addExp(totalExp);
+            
+            // Lưu thống kê
+            const data = loadData();
+            data.totalMatches++;
+            if (isP1Win) data.totalWins++;
+            data.totalKills += kills;
+            saveData(data);
+            
+            // Lưu leaderboard
+            const playerName = isP1Win ? 'P1' : (this.mode === 'bot' ? 'Bot' : 'P2');
+            addLeaderboardEntry(playerName, kills, this.winner.damage || 0, this.round, this.mode);
+            
+            // Cập nhật điểm số
             if (this.winner.id === 1) this.score1++;
             else this.score2++;
+            
+            // Hiển thị thưởng
+            this.showReward(totalCoins, totalExp, levelData, isP1Win);
+            
             if (this.score1 >= CONSTANTS.WIN_ROUNDS || this.score2 >= CONSTANTS.WIN_ROUNDS) {
                 this.state = 'matchEnd';
                 showWinner(this);
@@ -404,12 +459,45 @@ export class Game {
         }
     }
     
+    showReward(coins, exp, levelData, isP1Win) {
+        const msg = document.createElement('div');
+        msg.style.cssText = `
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 16px;
+            z-index: 15;
+            text-align: center;
+            pointer-events: none;
+            border: 2px solid ${isP1Win ? '#ff6b6b' : '#4ecdc4'};
+            min-width: 200px;
+        `;
+        msg.innerHTML = `
+            <div style="font-size: 32px; margin-bottom: 8px;">${isP1Win ? '🏆' : '💪'}</div>
+            <div style="font-size: 18px; font-weight: bold; color: ${isP1Win ? '#ff6b6b' : '#4ecdc4'};">
+                ${isP1Win ? 'THẮNG!' : 'CỐ GẮNG!'}
+            </div>
+            <div style="margin: 10px 0; font-size: 14px;">
+                🪙 +${coins} xu &nbsp;|&nbsp; ⭐ +${exp} EXP
+            </div>
+            ${levelData.leveled ? `<div style="color: #fdcb6e; font-size: 16px;">⬆ Lên Level ${levelData.level}!</div>` : ''}
+            <div style="font-size: 12px; color: #888; margin-top: 6px;">
+                Level ${levelData.level} &nbsp;|&nbsp; ${Math.round(levelData.exp)}/${levelData.expToNext} EXP
+            </div>
+        `;
+        document.getElementById('gameWrapper').appendChild(msg);
+        setTimeout(() => msg.remove(), 3000);
+    }
+    
     handleKeyDown(key, keys) {
         const p1 = this.p1;
         const p2 = this.p2;
         if (!this.running) return;
         
-        // P1: WASD
         let dx1 = 0, dy1 = 0;
         if (keys['w'] || keys['W']) dy1 = -1;
         if (keys['s'] || keys['S']) dy1 = 1;
@@ -429,7 +517,6 @@ export class Game {
             setTimeout(() => p1.input.weapon = false, 100);
         }
         
-        // P2: Arrow keys
         let dx2 = 0, dy2 = 0;
         if (keys['ArrowUp']) dy2 = -1;
         if (keys['ArrowDown']) dy2 = 1;
@@ -460,7 +547,6 @@ export class Game {
         if (key === 'Enter') p2.input.shoot = false;
         if (key === '.') p2.input.bomb = false;
         
-        // Update WASD
         let dx1 = 0, dy1 = 0;
         if (keys['w'] || keys['W']) dy1 = -1;
         if (keys['s'] || keys['S']) dy1 = 1;
