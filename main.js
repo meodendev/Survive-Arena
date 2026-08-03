@@ -10,6 +10,19 @@ const H = 500;
 canvas.width = W;
 canvas.height = H;
 
+// ===== IPHONE FIX: Ngăn scroll toàn màn hình =====
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('gesturestart', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('gesturechange', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
 // DOM refs
 const hpP1 = document.getElementById('hpP1');
 const hpP2 = document.getElementById('hpP2');
