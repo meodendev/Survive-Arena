@@ -23,13 +23,13 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
-    max-width: 100vh;  /* Giới hạn chiều rộng theo chiều cao */
-    max-height: 100vw; /* Giới hạn chiều cao theo chiều rộng */
+    max-width: 100vh;
+    max-height: 100vw;
     background: #1a1a2e;
     overflow: hidden;
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
     touch-action: none;
-    aspect-ratio: 16 / 9; /* Tỷ lệ màn hình ngang */
+    aspect-ratio: 16 / 9;
 }
 
 canvas {
@@ -383,7 +383,44 @@ canvas {
     z-index: 10;
 }
 
-/* Responsive - Quan trọng cho ngang */
+/* ===== IPHONE TOUCH FIX ===== */
+.joystick-area,
+.action-btn {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none !important;
+    cursor: pointer;
+}
+
+.joystick-area {
+    touch-action: none !important;
+    -webkit-touch-action: none !important;
+}
+
+.action-btn:active {
+    transform: scale(0.8);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Tăng kích thước vùng chạm cho iPhone */
+.joystick-area {
+    min-width: 80px;
+    min-height: 80px;
+}
+
+.action-btn {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+/* Fix cho Safari iOS */
+#gameWrapper {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+}
+
+/* Responsive */
 @media (max-aspect-ratio: 16/9) {
     #gameWrapper {
         width: 100vw;
@@ -394,5 +431,54 @@ canvas {
     #gameWrapper {
         width: calc(100vh * 16 / 9);
         height: 100vh;
+    }
+}
+
+/* Responsive cho màn hình nhỏ */
+@media (max-width: 600px) {
+    .joystick-area {
+        max-width: 100px;
+        min-width: 60px;
+        min-height: 60px;
+    }
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+    .btn-row {
+        gap: 4px;
+    }
+    #controls {
+        height: 40%;
+    }
+}
+
+@media (max-height: 400px) {
+    .joystick-area {
+        max-width: 70px;
+        min-width: 50px;
+        min-height: 50px;
+    }
+    .action-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 11px;
+        min-width: 30px;
+        min-height: 30px;
+    }
+    #controls {
+        height: 38%;
+    }
+    #hpContainer {
+        top: 25px;
+    }
+    #topBar .score {
+        font-size: 10px;
+    }
+    #roundDisplay {
+        font-size: 10px;
     }
 }
