@@ -25,7 +25,6 @@ export function getDefaultData() {
             musicVolume: 0.5,
             vibration: true,
             joystickSize: 1.0,
-            graphics: 'high',
         }
     };
 }
@@ -39,7 +38,6 @@ export function loadData() {
             return defaultData;
         }
         const data = JSON.parse(raw);
-        // Merge với default để đảm bảo đủ fields
         const defaultData = getDefaultData();
         for (const key in defaultData) {
             if (!(key in data)) {
@@ -48,7 +46,6 @@ export function loadData() {
         }
         return data;
     } catch (e) {
-        console.warn('Lỗi load data:', e);
         return getDefaultData();
     }
 }
@@ -58,7 +55,6 @@ export function saveData(data) {
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         return true;
     } catch (e) {
-        console.warn('Lỗi save data:', e);
         return false;
     }
 }
@@ -73,16 +69,17 @@ export function addCoins(amount) {
 export function addExp(amount) {
     const data = loadData();
     data.exp += amount;
+    let leveled = false;
     while (data.exp >= data.expToNext) {
         data.exp -= data.expToNext;
         data.level++;
         data.expToNext = Math.floor(data.expToNext * 1.3);
         data.statPoints++;
-        // Tăng máu mỗi level
         data.stats.hp += 5;
+        leveled = true;
     }
     saveData(data);
-    return data;
+    return { ...data, leveled };
 }
 
 export function addStats(type, amount) {
@@ -117,12 +114,6 @@ export function selectSkin(skinId) {
     return true;
 }
 
-export function updateSetting(key, value) {
-    const data = loadData();
-    data.settings[key] = value;
-    saveData(data);
-}
-
 export function getSkinColor(skinId) {
     const skins = {
         default: '#ff6b6b',
@@ -135,4 +126,19 @@ export function getSkinColor(skinId) {
         pink: '#fd79a8',
     };
     return skins[skinId] || skins.default;
+}
+
+export function getStats() {
+    const data = loadData();
+    return data.stats;
+}
+
+export function getLevelInfo() {
+    const data = loadData();
+    return {
+        level: data.level,
+        exp: data.exp,
+        expToNext: data.expToNext,
+        statPoints: data.statPoints,
+    };
 }
