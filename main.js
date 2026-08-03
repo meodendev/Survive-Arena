@@ -4,7 +4,8 @@ import { loadData, saveData, getStats, getLevelInfo, addStats } from './js/save.
 import { getShopItems, buySkin, equipSkin, buyStatBoost, SHOP_ITEMS, STAT_ITEMS } from './js/shop.js';
 import { getLeaderboard } from './js/leaderboard.js';
 import { getInventory } from './js/inventory.js';
-import { getSettings, setSetting, applySettings } from './js/settings.js';
+// ===== SỬA: settings.js -> setting.js =====
+import { getSettings, setSetting, applySettings } from './js/setting.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -207,7 +208,6 @@ function renderShop() {
             if (result.success) {
                 renderShop();
                 updateMenuUI();
-                // Cập nhật stats cho game
                 game.applyStats();
             }
         };
