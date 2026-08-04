@@ -86,7 +86,7 @@ document.getElementById('btnBot').addEventListener('click', () => {
     updateMenuUI();
 });
 
-document.getElementById('btnOnline').addEventListener('click', () => {
+document.getElementById('btnOnline')?.addEventListener('click', () => {
     alert('🌐 Chế độ Online đang phát triển!');
 });
 
