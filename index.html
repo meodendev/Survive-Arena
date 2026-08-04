@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Survive Arena</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="gameWrapper">
+
+  <!-- ===== MENU CHÍNH ===== -->
+  <div id="menu">
+    <h1>⚔️ Survive Arena</h1>
+    <div class="subtitle">Battle Royale trên điện thoại</div>
+    <div class="subtitle">💰 <span id="menuCoins">0</span> &nbsp; | &nbsp; ⭐ Lv.<span id="menuLevel">1</span></div>
+
+    <button id="btnLocal" class="menu-btn primary">👥 2 Người chơi (cùng máy)</button>
+    <button id="btnBot" class="menu-btn primary">🤖 Đấu với Bot</button>
+    <button id="btnOnline" class="menu-btn">🌐 Chơi Online</button>
+    <button id="btnShop" class="menu-btn">🛒 Cửa hàng</button>
+    <button id="btnUpgrade" class="menu-btn">✨ Nâng cấp</button>
+    <button id="btnStats" class="menu-btn">📊 Thống kê</button>
+    <button id="btnLeaderboard" class="menu-btn">🏆 Bảng xếp hạng</button>
+    <button id="btnSettings" class="menu-btn">⚙️ Cài đặt</button>
+
+    <div class="controls-hint">
+      P1: <kbd>WASD</kbd> di chuyển, <kbd>Space</kbd> bắn, <kbd>Q</kbd> bom, <kbd>E</kbd> đổi súng<br>
+      P2: <kbd>↑↓←→</kbd> di chuyển, <kbd>Enter</kbd> bắn, <kbd>.</kbd> bom, <kbd>/</kbd> đổi súng
+    </div>
+  </div>
+
+  <!-- ===== UI TRONG GAME ===== -->
+  <div id="ui">
+    <div id="topBar">
+      <div class="score p1">P1: <span id="scoreP1">0</span></div>
+      <div id="roundDisplay">Round 1</div>
+      <div class="score p2">P2: <span id="scoreP2">0</span></div>
+    </div>
+
+    <div id="weaponDisplay"></div>
+
+    <div id="hpContainer">
+      <div class="hp-wrap">
+        <div class="label">P1</div>
+        <div class="hp-track"><div id="hpP1" class="hp-fill p1" style="width:100%"></div></div>
+      </div>
+      <div class="hp-wrap">
+        <div class="label">P2</div>
+        <div class="hp-track"><div id="hpP2" class="hp-fill p2" style="width:100%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="winnerMsg" style="display:none;">
+    <div id="winnerText"></div>
+    <button id="restartBtn">Chơi lại</button>
+  </div>
+
+  <!-- ===== ĐIỀU KHIỂN ẢO ===== -->
+  <div id="controls" style="display:none;">
+    <div class="ctrl-group p1">
+      <div id="joyP1" class="joystick-area"><div id="knobP1" class="knob"></div></div>
+      <div class="btn-row">
+        <button id="weaponP1" class="action-btn weapon">🔫</button>
+        <button id="bombP1" class="action-btn bomb">💣</button>
+        <button id="speedP1" class="action-btn speed">⚡</button>
+        <button id="shootP1" class="action-btn shoot">🔥</button>
+      </div>
+    </div>
+
+    <div class="ctrl-group p2">
+      <div class="btn-row">
+        <button id="shootP2" class="action-btn shoot">🔥</button>
+        <button id="speedP2" class="action-btn speed">⚡</button>
+        <button id="bombP2" class="action-btn bomb">💣</button>
+        <button id="weaponP2" class="action-btn weapon">🔫</button>
+      </div>
+      <div id="joyP2" class="joystick-area"><div id="knobP2" class="knob"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== POPUP: SHOP ===== -->
+  <div id="shopPopup" style="display:none;">
+    <div>
+      <h2>🛒 Cửa hàng &nbsp; 💰 <span id="shopCoins">0</span></h2>
+      <div id="shopItems"></div>
+      <div id="shopStats"></div>
+      <button id="closeShop" class="menu-btn">Đóng</button>
+    </div>
+  </div>
+
+  <!-- ===== POPUP: NÂNG CẤP ===== -->
+  <div id="upgradePopup" style="display:none;">
+    <div>
+      <h2>✨ Nâng cấp &nbsp; Điểm: <span id="upgradePoints">0</span></h2>
+      <div id="upgradeOptions"></div>
+      <button id="closeUpgrade" class="menu-btn">Đóng</button>
+    </div>
+  </div>
+
+  <!-- ===== POPUP: THỐNG KÊ ===== -->
+  <div id="statsPopup" style="display:none;">
+    <div>
+      <h2>📊 Thống kê</h2>
+      <div id="statsContent"></div>
+      <button id="closeStats" class="menu-btn">Đóng</button>
+    </div>
+  </div>
+
+  <!-- ===== POPUP: BẢNG XẾP HẠNG ===== -->
+  <div id="leaderboardPopup" style="display:none;">
+    <div>
+      <h2>🏆 Bảng xếp hạng</h2>
+      <div id="leaderboardContent"></div>
+      <button id="closeLeaderboard" class="menu-btn">Đóng</button>
+    </div>
+  </div>
+
+  <!-- ===== POPUP: CÀI ĐẶT ===== -->
+  <div id="settingsPopup" style="display:none;">
+    <div>
+      <h2>⚙️ Cài đặt</h2>
+      <div id="settingsContent"></div>
+      <button id="closeSettings" class="menu-btn">Đóng</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
