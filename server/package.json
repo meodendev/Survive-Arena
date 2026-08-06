@@ -1,0 +1,15 @@
+{
+  "name": "survive-arena-relay",
+  "version": "1.0.0",
+  "description": "WebSocket relay server cho chế độ Online của Survive Arena",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
