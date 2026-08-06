@@ -1,5 +1,5 @@
 import { WEAPONS } from './weapon.js';
-import { checkCollision } from './map.js';
+import { checkCollision, resolveObstacleCollision } from './map.js';
 
 export class Player {
     constructor(id, x, y, color, side) {
@@ -19,38 +19,112 @@ export class Player {
         this.speedBoost = 0;
         this.shield = 0;
         this.alive = true;
-        this.weapon = 'pistol';
+
+        // ===== Túi đồ (Inventory) =====
+        // Chỉ mang tối đa 2 khẩu súng cùng lúc. Nhặt súng thứ 3 sẽ thay
+        // thế khẩu đang cầm (không có UI kéo-thả nên auto-swap là hợp lý
+        // cho gameplay tốc độ nhanh 2 người chơi / vs bot).
+        this.maxWeapons = 2;
         this.weapons = ['pistol'];
         this.weaponIndex = 0;
-        this.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false };
+        this.weapon = 'pistol';
+        this.ammo = {};
+        this.initAmmo('pistol');
+
+        this.maxBombs = 3;
+        this.bombs = this.maxBombs;
+
+        this.maxMedkits = 2;
+        this.medkits = 1;
+        this.medkitHeal = 40;
+
+        this.reloading = false;
+        this.reloadTimer = 0;
+
+        this.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false, reload: false, medkit: false };
         this.isBot = false;
         this.botTimer = 0;
         this.botTarget = null;
         this.botState = 'idle'; // 'idle', 'chase', 'flee', 'loot'
         this.botStateTimer = 0;
     }
-    
+
     getWeapon() {
         return WEAPONS[this.weapon] || WEAPONS.pistol;
     }
-    
+
+    // ===== Hệ thống đạn =====
+    initAmmo(name) {
+        if (this.ammo[name]) return;
+        const w = WEAPONS[name];
+        this.ammo[name] = { mag: w.magSize, reserve: w.reserve };
+    }
+
+    getAmmo() {
+        return this.ammo[this.weapon];
+    }
+
+    canShoot() {
+        return !this.reloading && this.getAmmo().mag > 0;
+    }
+
+    consumeAmmo() {
+        this.getAmmo().mag -= 1;
+    }
+
+    startReload() {
+        const a = this.getAmmo();
+        const w = this.getWeapon();
+        if (this.reloading || a.mag >= w.magSize || a.reserve <= 0) return false;
+        this.reloading = true;
+        this.reloadTimer = w.reloadTime;
+        return true;
+    }
+
+    addAmmoReserve(amount) {
+        const w = WEAPONS[this.weapon];
+        const a = this.getAmmo();
+        a.reserve = Math.min(w.reserve * 2, a.reserve + amount);
+    }
+
+    addBomb(n = 1) {
+        this.bombs = Math.min(this.maxBombs, this.bombs + n);
+    }
+
+    addMedkit(n = 1) {
+        this.medkits = Math.min(this.maxMedkits, this.medkits + n);
+    }
+
     switchWeapon() {
         if (this.weapons.length <= 1) return;
         this.weaponIndex = (this.weaponIndex + 1) % this.weapons.length;
         this.weapon = this.weapons[this.weaponIndex];
+        this.reloading = false;
     }
-    
+
     addWeapon(name) {
-        if (!this.weapons.includes(name)) {
+        if (this.weapons.includes(name)) {
+            // Đã có khẩu này rồi -> nhặt trùng thành đạn dự trữ thay vì bỏ phí
+            const w = WEAPONS[name];
+            this.addAmmoReserve(Math.round(w.magSize * 1.5));
+            return 'ammo';
+        }
+        this.initAmmo(name);
+        if (this.weapons.length < this.maxWeapons) {
             this.weapons.push(name);
             this.weaponIndex = this.weapons.length - 1;
-            this.weapon = name;
+        } else {
+            // Balo chỉ mang tối đa maxWeapons khẩu -> thay khẩu đang cầm
+            this.weapons[this.weaponIndex] = name;
         }
+        this.weapon = name;
+        this.reloading = false;
+        return 'weapon';
     }
-    
+
     update(dt, game) {
         if (!this.alive) return;
-        
+
         // Cooldowns
         if (this.shootCooldown > 0) this.shootCooldown -= dt;
         if (this.bombCooldown > 0) this.bombCooldown -= dt;
@@ -60,12 +134,26 @@ export class Player {
             if (this.speedBoost <= 0) this.speed = this.baseSpeed;
         }
         if (this.shield > 0) this.shield -= dt;
-        
+
+        // Nạp đạn
+        if (this.reloading) {
+            this.reloadTimer -= dt;
+            if (this.reloadTimer <= 0) {
+                const a = this.getAmmo();
+                const w = this.getWeapon();
+                const need = w.magSize - a.mag;
+                const take = Math.min(need, a.reserve);
+                a.mag += take;
+                a.reserve -= take;
+                this.reloading = false;
+            }
+        }
+
         // Bot AI
         if (this.isBot) {
             this.updateBot(dt, game);
         }
-        
+
         // Di chuyển
         const len = Math.hypot(this.input.dx, this.input.dy);
         if (len > 0.1) {
@@ -73,38 +161,70 @@ export class Player {
             const normY = this.input.dy / len;
             const newX = this.x + normX * this.speed * dt * 60;
             const newY = this.y + normY * this.speed * dt * 60;
-            
-            // Kiểm tra va chạm với vật cản
+
+            // Kiểm tra va chạm với vật cản (trượt theo từng trục riêng)
             if (!checkCollision(newX, this.y, this.radius, game.obstacles)) {
                 this.x = newX;
             }
             if (!checkCollision(this.x, newY, this.radius, game.obstacles)) {
                 this.y = newY;
             }
+
             this.angle = Math.atan2(normY, normX);
         }
-        
+
+        // ===== SỬA: chống kẹt cứng khi tâm nhân vật đã đè lên đá =====
+        // Chạy VÔ ĐIỀU KIỆN mỗi frame (không chỉ khi có input di chuyển),
+        // vì player-vs-player knockback (game.js resolvePlayerCollision)
+        // có thể đẩy người chơi vào vật cản trong lúc họ đứng yên, không
+        // bấm hướng nào. Nếu chỉ resolve bên trong khối "có input" thì
+        // trường hợp đó sẽ đứng kẹt trong đá cho tới khi bấm di chuyển.
+        const resolved = resolveObstacleCollision(this.x, this.y, this.radius, game.obstacles);
+        this.x = resolved.x;
+        this.y = resolved.y;
+
         // Đổi súng
         if (this.input.weapon) {
             this.switchWeapon();
             this.input.weapon = false;
-            if (this.id === 1) {
-                game.dom.weaponDisplay.textContent = '🔫 ' + this.getWeapon().name;
+        }
+
+        // Nạp đạn theo lệnh người chơi
+        if (this.input.reload) {
+            this.input.reload = false;
+            this.startReload();
+        }
+
+        // Dùng bình máu
+        if (this.input.medkit) {
+            this.input.medkit = false;
+            if (this.medkits > 0 && this.hp < this.maxHp) {
+                this.medkits--;
+                this.hp = Math.min(this.maxHp, this.hp + this.medkitHeal);
+                return 'medkit';
             }
         }
-        
+
         // Bắn
         if (this.input.shoot && this.shootCooldown <= 0) {
-            this.shootCooldown = this.getWeapon().cooldown;
-            return 'shoot';
+            if (this.canShoot()) {
+                this.shootCooldown = this.getWeapon().cooldown;
+                this.consumeAmmo();
+                return 'shoot';
+            } else if (!this.reloading) {
+                // Hết đạn -> tự động nạp thay vì bấm chay
+                this.startReload();
+                return 'empty';
+            }
         }
-        
-        // Bom
-        if (this.input.bomb && this.bombCooldown <= 0) {
+
+        // Bom (giới hạn theo số lượng mang trong túi)
+        if (this.input.bomb && this.bombCooldown <= 0 && this.bombs > 0) {
             this.bombCooldown = 3;
+            this.bombs--;
             return 'bomb';
         }
-        
+
         // Tăng tốc
         if (this.input.speed && this.speedBoost <= 0) {
             this.speedBoost = 5;
@@ -113,11 +233,11 @@ export class Player {
         }
         return null;
     }
-    
+
     updateBot(dt, game) {
         this.botTimer += dt;
         this.botStateTimer += dt;
-        
+
         // Tìm mục tiêu (người chơi thật)
         const target = game.players.find(p => p.id !== this.id && p.alive && !p.isBot);
         if (!target) {
@@ -126,18 +246,18 @@ export class Player {
             this.input.dy = Math.cos(this.botTimer * 0.7);
             return;
         }
-        
+
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const dist = Math.hypot(dx, dy);
-        
+
         // Đổi trạng thái
         if (this.botStateTimer > 2 + Math.random() * 3) {
             const states = ['chase', 'chase', 'chase', 'flee', 'loot'];
             this.botState = states[Math.floor(Math.random() * states.length)];
             this.botStateTimer = 0;
         }
-        
+
         // Xử lý theo trạng thái
         switch (this.botState) {
             case 'chase':
@@ -152,7 +272,7 @@ export class Player {
                 }
                 this.angle = Math.atan2(dy, dx);
                 break;
-                
+
             case 'flee':
                 if (dist < 300) {
                     this.input.dx = -dx / dist;
@@ -163,7 +283,7 @@ export class Player {
                 }
                 this.angle = Math.atan2(dy, dx);
                 break;
-                
+
             case 'loot':
                 // Tìm vật phẩm gần nhất
                 let nearestItem = null;
@@ -189,12 +309,12 @@ export class Player {
                 }
                 this.angle = Math.atan2(dy, dx);
                 break;
-                
+
             default:
                 this.input.dx = Math.sin(this.botTimer * 0.5);
                 this.input.dy = Math.cos(this.botTimer * 0.7);
         }
-        
+
         // Bắn
         if (dist < 400 && Math.random() < 0.04 + (1 - dist / 400) * 0.03) {
             this.input.shoot = true;
@@ -207,19 +327,29 @@ export class Player {
         } else {
             this.input.shoot = false;
         }
-        
+
         // Bom
-        if (dist < 150 && Math.random() < 0.005) {
+        if (dist < 150 && this.bombs > 0 && Math.random() < 0.005) {
             this.input.bomb = true;
         } else {
             this.input.bomb = false;
         }
-        
+
         // Tăng tốc
         if (this.speedBoost <= 0 && Math.random() < 0.002) {
             this.input.speed = true;
         }
-        
+
+        // Tự nạp đạn khi hết mà không có input.shoot giữ (chủ động nạp lúc rảnh)
+        if (!this.reloading && this.getAmmo().mag === 0 && this.getAmmo().reserve > 0) {
+            this.input.reload = true;
+        }
+
+        // Tự dùng bình máu khi máu thấp
+        if (this.hp < this.maxHp * 0.35 && this.medkits > 0) {
+            this.input.medkit = true;
+        }
+
         // Né đạn
         let danger = false;
         for (const b of game.bullets) {
@@ -239,7 +369,7 @@ export class Player {
                 break;
             }
         }
-        
+
         // Tránh bo
         const zoneDist = Math.hypot(this.x - game.zone.x, this.y - game.zone.y);
         if (zoneDist > game.zone.radius * 0.7) {
@@ -253,7 +383,7 @@ export class Player {
             }
         }
     }
-    
+
     takeDamage(dmg) {
         if (this.shield > 0) {
             this.shield = 0;

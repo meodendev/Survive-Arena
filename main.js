@@ -4,6 +4,7 @@ import { loadData, saveData, getStats, getLevelInfo, addStats } from './js/save.
 import { getShopItems, buySkin, equipSkin, buyStatBoost, SHOP_ITEMS, STAT_ITEMS } from './js/shop.js';
 import { getLeaderboard } from './js/leaderboard.js';
 import { getInventory } from './js/inventory.js';
+import { netConnect, netOn, netSend, netCreateRoom, netJoinRoom, netDisconnect, netIsConnected } from './js/net.js';
 // ===== SỬA: settings.js -> setting.js =====
 import { getSettings, setSetting, applySettings } from './js/setting.js';
 
@@ -59,10 +60,14 @@ setupButton('shootP1', game.p1, 'shoot');
 setupButton('bombP1', game.p1, 'bomb');
 setupButton('speedP1', game.p1, 'speed');
 setupButton('weaponP1', game.p1, 'weapon');
+setupButton('reloadP1', game.p1, 'reload');
+setupButton('medkitP1', game.p1, 'medkit');
 setupButton('shootP2', game.p2, 'shoot');
 setupButton('bombP2', game.p2, 'bomb');
 setupButton('speedP2', game.p2, 'speed');
 setupButton('weaponP2', game.p2, 'weapon');
+setupButton('reloadP2', game.p2, 'reload');
+setupButton('medkitP2', game.p2, 'medkit');
 
 // ===== UPDATE MENU COINS & LEVEL =====
 function updateMenuUI() {
@@ -87,7 +92,7 @@ document.getElementById('btnBot').addEventListener('click', () => {
 });
 
 document.getElementById('btnOnline')?.addEventListener('click', () => {
-    alert('🌐 Chế độ Online đang phát triển!');
+    openOnline();
 });
 
 // ===== SHOP =====
@@ -104,6 +109,162 @@ function openShop() {
     popup.style.display = 'flex';
     renderShop();
 }
+
+// ===== ONLINE =====
+const onlineStatus = document.getElementById('onlineStatus');
+const onlineLobby = document.getElementById('onlineLobby');
+const onlineRoomInfo = document.getElementById('onlineRoomInfo');
+const onlineRoomCode = document.getElementById('onlineRoomCode');
+const onlineWaitMsg = document.getElementById('onlineWaitMsg');
+const btnStartOnline = document.getElementById('btnStartOnline');
+const onlineServerUrlInput = document.getElementById('onlineServerUrl');
+
+// Nhớ lại địa chỉ server đã dùng lần trước cho tiện (chỉ lưu trên máy này)
+try {
+    const savedUrl = localStorage.getItem('survivearena_relay_url');
+    if (savedUrl) onlineServerUrlInput.value = savedUrl;
+} catch {}
+
+function setOnlineStatus(msg, isError) {
+    onlineStatus.textContent = msg || '';
+    onlineStatus.style.color = isError ? '#ff6b6b' : '#fdcb6e';
+}
+
+function openOnline() {
+    document.getElementById('onlinePopup').style.display = 'flex';
+    onlineLobby.style.display = 'block';
+    onlineRoomInfo.style.display = 'none';
+    setOnlineStatus('');
+}
+
+document.getElementById('closeOnline').addEventListener('click', () => {
+    document.getElementById('onlinePopup').style.display = 'none';
+});
+
+async function ensureConnected() {
+    const url = getServerUrlInput();
+    if (!url) {
+        setOnlineStatus('⚠️ Nhập địa chỉ relay server trước đã (xem server/README.md).', true);
+        return false;
+    }
+    try { localStorage.setItem('survivearena_relay_url', url); } catch {}
+    if (netIsConnected()) return true;
+    setOnlineStatus('🔌 Đang kết nối server...');
+    try {
+        await netConnect(url);
+        return true;
+    } catch (err) {
+        setOnlineStatus('❌ Không kết nối được server. Kiểm tra lại địa chỉ.', true);
+        return false;
+    }
+}
+
+function getServerUrlInput() {
+    return (onlineServerUrlInput.value || '').trim();
+}
+
+document.getElementById('btnCreateRoom').addEventListener('click', async () => {
+    if (!(await ensureConnected())) return;
+    setOnlineStatus('🔌 Đang tạo phòng...');
+    netCreateRoom();
+});
+
+document.getElementById('btnJoinRoom').addEventListener('click', async () => {
+    const code = document.getElementById('onlineJoinCode').value;
+    if (!code || code.trim().length < 4) {
+        setOnlineStatus('⚠️ Nhập mã phòng hợp lệ (5 ký tự).', true);
+        return;
+    }
+    if (!(await ensureConnected())) return;
+    setOnlineStatus('🔌 Đang vào phòng...');
+    netJoinRoom(code);
+});
+
+// Bắt đầu trận khi host bấm nút (đồng bộ thời điểm bắt đầu cho cả 2 máy)
+btnStartOnline.addEventListener('click', () => {
+    netSend({ t: 'go' });
+    startOnlineMatch('host');
+});
+
+function startOnlineMatch(role) {
+    game.netRole = role;
+    game.netSendFn = netSend;
+    game.p2.isBot = false;
+    document.getElementById('onlinePopup').style.display = 'none';
+    game.start('online');
+    menu.style.display = 'none';
+    controls.style.display = 'flex';
+    updateMenuUI();
+}
+
+function leaveOnlineMatch(reason) {
+    if (game.netRole) {
+        alert(reason || '🌐 Mất kết nối với đối thủ.');
+    }
+    game.netRole = null;
+    game.netSendFn = null;
+    game.remoteInput = null;
+    game.running = false;
+    netDisconnect();
+    controls.style.display = 'none';
+    menu.style.display = 'flex';
+    document.getElementById('onlinePopup').style.display = 'none';
+}
+
+netOn('created', (msg) => {
+    onlineLobby.style.display = 'none';
+    onlineRoomInfo.style.display = 'block';
+    onlineRoomCode.textContent = msg.code;
+    onlineWaitMsg.style.display = 'block';
+    btnStartOnline.style.display = 'none';
+    setOnlineStatus('');
+});
+
+netOn('joined', (msg) => {
+    onlineLobby.style.display = 'none';
+    onlineRoomInfo.style.display = 'block';
+    onlineRoomCode.textContent = msg.code;
+    onlineWaitMsg.textContent = '⏳ Đã vào phòng — đang chờ host bắt đầu trận...';
+    btnStartOnline.style.display = 'none';
+    setOnlineStatus('');
+});
+
+netOn('peer_joined', () => {
+    onlineWaitMsg.textContent = '✅ Người chơi kia đã vào phòng!';
+    btnStartOnline.style.display = 'block';
+});
+
+netOn('peer_left', () => {
+    leaveOnlineMatch('🌐 Đối thủ đã rời phòng.');
+});
+
+netOn('disconnected', () => {
+    leaveOnlineMatch('🌐 Mất kết nối tới server.');
+});
+
+netOn('error', (msg) => {
+    setOnlineStatus('❌ ' + (msg.msg || 'Có lỗi xảy ra.'), true);
+});
+
+// Guest nhận lệnh "go" từ host -> vào trận cùng lúc với host
+netOn('go', () => {
+    startOnlineMatch('guest');
+});
+
+// Host nhận input liên tục từ guest
+netOn('input', (msg) => {
+    game.remoteInput = msg.input;
+});
+
+// Guest nhận state liên tục từ host
+netOn('state', (msg) => {
+    game.applyNetState(msg);
+});
+
+// Guest yêu cầu restart -> host thực thi rồi tự broadcast state ở tick kế tiếp
+netOn('restart_request', () => {
+    if (game.netRole === 'host') game.restart();
+});
 
 function renderShop() {
     const data = loadData();
@@ -449,7 +610,11 @@ function renderUpgrade() {
 
 // ===== RESTART =====
 restartBtn.addEventListener('click', () => {
-    game.restart();
+    if (game.netRole === 'guest') {
+        netSend({ t: 'restart_request' });
+    } else {
+        game.restart();
+    }
 });
 
 // ===== KEYBOARD =====

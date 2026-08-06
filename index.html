@@ -65,6 +65,8 @@
     <div class="ctrl-group p1">
       <div id="joyP1" class="joystick-area"><div id="knobP1" class="knob"></div></div>
       <div class="btn-row">
+        <button id="medkitP1" class="action-btn medkit">❤️</button>
+        <button id="reloadP1" class="action-btn reload">🔄</button>
         <button id="weaponP1" class="action-btn weapon">🔫</button>
         <button id="bombP1" class="action-btn bomb">💣</button>
         <button id="speedP1" class="action-btn speed">⚡</button>
@@ -78,6 +80,8 @@
         <button id="speedP2" class="action-btn speed">⚡</button>
         <button id="bombP2" class="action-btn bomb">💣</button>
         <button id="weaponP2" class="action-btn weapon">🔫</button>
+        <button id="reloadP2" class="action-btn reload">🔄</button>
+        <button id="medkitP2" class="action-btn medkit">❤️</button>
       </div>
       <div id="joyP2" class="joystick-area"><div id="knobP2" class="knob"></div></div>
     </div>
@@ -117,6 +121,37 @@
       <h2>🏆 Bảng xếp hạng</h2>
       <div id="leaderboardContent"></div>
       <button id="closeLeaderboard" class="menu-btn">Đóng</button>
+    </div>
+  </div>
+
+  <!-- ===== POPUP: ONLINE ===== -->
+  <div id="onlinePopup" style="display:none;">
+    <div>
+      <h2>🌐 Chơi Online</h2>
+
+      <div id="onlineLobby">
+        <label for="onlineServerUrl">Địa chỉ relay server (WebSocket)</label>
+        <input id="onlineServerUrl" type="text" placeholder="wss://ten-server-cua-ban.onrender.com">
+
+        <button id="btnCreateRoom" class="menu-btn primary" style="margin-top:14px;">➕ Tạo phòng mới</button>
+
+        <label for="onlineJoinCode">Hoặc nhập mã phòng để vào</label>
+        <div style="display:flex; gap:8px;">
+          <input id="onlineJoinCode" type="text" placeholder="VD: A7K2M" maxlength="5" style="text-transform:uppercase; text-align:center; letter-spacing:2px;">
+          <button id="btnJoinRoom" class="menu-btn">Vào</button>
+        </div>
+
+        <div id="onlineStatus"></div>
+      </div>
+
+      <div id="onlineRoomInfo" style="display:none;">
+        <div style="text-align:center; font-size:13px; color:#9aa5b1;">Mã phòng của bạn — gửi cho bạn bè:</div>
+        <div id="onlineRoomCode"></div>
+        <div id="onlineWaitMsg" style="text-align:center; font-size:13px; color:#fdcb6e;">⏳ Đang chờ người chơi khác vào phòng...</div>
+        <button id="btnStartOnline" class="menu-btn primary" style="display:none; margin-top:12px;">▶️ Bắt đầu trận</button>
+      </div>
+
+      <button id="closeOnline" class="menu-btn" style="margin-top:14px;">Đóng</button>
     </div>
   </div>
 

@@ -115,12 +115,9 @@ export function setupButton(btnId, player, key) {
     el.addEventListener('touchstart', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (key === 'speed') {
-            player.input.speed = true;
-            setTimeout(() => { player.input.speed = false; }, 100);
-        } else if (key === 'weapon') {
-            player.input.weapon = true;
-            setTimeout(() => { player.input.weapon = false; }, 100);
+        if (key === 'speed' || key === 'weapon' || key === 'reload' || key === 'medkit') {
+            player.input[key] = true;
+            setTimeout(() => { player.input[key] = false; }, 100);
         } else {
             player.input[key] = true;
         }
@@ -131,7 +128,7 @@ export function setupButton(btnId, player, key) {
     el.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (key !== 'speed' && key !== 'weapon') {
+        if (key !== 'speed' && key !== 'weapon' && key !== 'reload' && key !== 'medkit') {
             player.input[key] = false;
         }
     }, { passive: false });
@@ -139,7 +136,7 @@ export function setupButton(btnId, player, key) {
     el.addEventListener('touchcancel', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (key !== 'speed' && key !== 'weapon') {
+        if (key !== 'speed' && key !== 'weapon' && key !== 'reload' && key !== 'medkit') {
             player.input[key] = false;
         }
     }, { passive: false });
@@ -147,12 +144,9 @@ export function setupButton(btnId, player, key) {
     // ===== MOUSE EVENTS (Desktop) =====
     el.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        if (key === 'speed') {
-            player.input.speed = true;
-            setTimeout(() => { player.input.speed = false; }, 100);
-        } else if (key === 'weapon') {
-            player.input.weapon = true;
-            setTimeout(() => { player.input.weapon = false; }, 100);
+        if (key === 'speed' || key === 'weapon' || key === 'reload' || key === 'medkit') {
+            player.input[key] = true;
+            setTimeout(() => { player.input[key] = false; }, 100);
         } else {
             player.input[key] = true;
         }
@@ -160,13 +154,13 @@ export function setupButton(btnId, player, key) {
     
     el.addEventListener('mouseup', (e) => {
         e.preventDefault();
-        if (key !== 'speed' && key !== 'weapon') {
+        if (key !== 'speed' && key !== 'weapon' && key !== 'reload' && key !== 'medkit') {
             player.input[key] = false;
         }
     });
     
     el.addEventListener('mouseleave', () => {
-        if (key !== 'speed' && key !== 'weapon') {
+        if (key !== 'speed' && key !== 'weapon' && key !== 'reload' && key !== 'medkit') {
             player.input[key] = false;
         }
     });

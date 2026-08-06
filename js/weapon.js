@@ -7,7 +7,10 @@ export const WEAPONS = {
         spread: 0.05,
         bullets: 1,
         range: 400,
-        color: '#ffdd44'
+        color: '#ffdd44',
+        magSize: 12,
+        reserve: 36,
+        reloadTime: 1.2
     },
     shotgun: {
         name: 'Shotgun',
@@ -17,7 +20,10 @@ export const WEAPONS = {
         spread: 0.2,
         bullets: 5,
         range: 200,
-        color: '#ff8833'
+        color: '#ff8833',
+        magSize: 6,
+        reserve: 18,
+        reloadTime: 2.2
     },
     rifle: {
         name: 'Rifle',
@@ -27,7 +33,10 @@ export const WEAPONS = {
         spread: 0.04,
         bullets: 1,
         range: 500,
-        color: '#33ff88'
+        color: '#33ff88',
+        magSize: 30,
+        reserve: 90,
+        reloadTime: 2.0
     },
     sniper: {
         name: 'Sniper',
@@ -38,7 +47,10 @@ export const WEAPONS = {
         bullets: 1,
         range: 700,
         color: '#ff33ff',
-        pierce: true
+        pierce: true,
+        magSize: 5,
+        reserve: 15,
+        reloadTime: 2.5
     },
     smg: {
         name: 'SMG',
@@ -48,7 +60,10 @@ export const WEAPONS = {
         spread: 0.12,
         bullets: 1,
         range: 300,
-        color: '#33ddff'
+        color: '#33ddff',
+        magSize: 25,
+        reserve: 75,
+        reloadTime: 1.8
     },
     ak: {
         name: 'AK-47',
@@ -58,6 +73,9 @@ export const WEAPONS = {
         spread: 0.1,
         bullets: 1,
         range: 450,
-        color: '#ff6633'
+        color: '#ff6633',
+        magSize: 30,
+        reserve: 90,
+        reloadTime: 2.0
     }
 };

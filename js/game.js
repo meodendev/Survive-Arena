@@ -51,6 +51,13 @@ export class Game {
         this.spawnTimer = 0;
         this.mode = 'local';
         this.running = false;
+
+        // ===== Online =====
+        // netRole: null (offline) | 'host' (chạy vật lý, gửi state) | 'guest' (chỉ nhận state, gửi input)
+        this.netRole = null;
+        this.netSendFn = null; // hàm gửi tin nhắn qua WebSocket, do main.js gán vào
+        this.remoteInput = null; // input mới nhất nhận từ guest (phía host dùng)
+        this.netTickAcc = 0; // tích lũy thời gian để throttle tần suất gửi state
         
         // Lấy stats từ save
         const stats = getStats();
@@ -61,10 +68,8 @@ export class Game {
         this.p2 = new Player(2, width - 150, height / 2, '#4ecdc4', 'right');
         this.p1.angle = 0;
         this.p2.angle = Math.PI;
-        this.p1.weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'smg', 'ak'];
-        this.p1.weapon = 'pistol';
-        this.p2.weapons = ['pistol', 'shotgun', 'rifle', 'sniper', 'smg', 'ak'];
-        this.p2.weapon = 'pistol';
+        // Túi đồ bắt đầu chỉ có pistol (mặc định của Player) — súng khác
+        // phải nhặt trên bản đồ, tối đa mang 2 khẩu cùng lúc.
         
         // Áp dụng stats
         this.applyStats();
@@ -90,8 +95,6 @@ export class Game {
         this.running = true;
         if (mode === 'bot') {
             this.p2.isBot = true;
-            this.p2.weapons = ['pistol', 'rifle', 'smg'];
-            this.p2.weapon = 'pistol';
         } else {
             this.p2.isBot = false;
         }
@@ -126,7 +129,16 @@ export class Game {
         this.p1.shootCooldown = 0;
         this.p1.bombCooldown = 0;
         this.p1.angle = 0;
-        this.p1.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false };
+        this.p1.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false, reload: false, medkit: false };
+        this.p1.weapons = ['pistol'];
+        this.p1.weaponIndex = 0;
+        this.p1.weapon = 'pistol';
+        this.p1.ammo = {};
+        this.p1.initAmmo('pistol');
+        this.p1.bombs = this.p1.maxBombs;
+        this.p1.medkits = 1;
+        this.p1.reloading = false;
+        this.p1.reloadTimer = 0;
         
         this.p2.x = this.W - 150;
         this.p2.y = this.H / 2;
@@ -137,12 +149,19 @@ export class Game {
         this.p2.shootCooldown = 0;
         this.p2.bombCooldown = 0;
         this.p2.angle = Math.PI;
-        this.p2.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false };
+        this.p2.input = { dx: 0, dy: 0, shoot: false, bomb: false, speed: false, weapon: false, reload: false, medkit: false };
+        this.p2.weapons = ['pistol'];
+        this.p2.weaponIndex = 0;
+        this.p2.weapon = 'pistol';
+        this.p2.ammo = {};
+        this.p2.initAmmo('pistol');
+        this.p2.bombs = this.p2.maxBombs;
+        this.p2.medkits = 1;
+        this.p2.reloading = false;
+        this.p2.reloadTimer = 0;
         
         if (this.mode === 'bot') {
             this.p2.isBot = true;
-            this.p2.weapons = ['pistol', 'rifle', 'smg'];
-            this.p2.weapon = 'pistol';
         }
         
         this.players.push(this.p1, this.p2);
@@ -152,7 +171,6 @@ export class Game {
         updateUI(this);
         this.dom.winnerMsg.style.display = 'none';
         this.dom.restartBtn.style.display = 'none';
-        this.dom.weaponDisplay.textContent = '🔫 ' + this.p1.getWeapon().name;
         
         // Reset knobs
         const knob1 = document.getElementById('knobP1');
@@ -176,7 +194,22 @@ export class Game {
     }
     
     update(dt) {
+        // ===== Guest (online): không tự chạy vật lý =====
+        // Máy khách không mô phỏng game — chỉ gửi input của mình lên host
+        // mỗi frame; state (vị trí, máu, đạn...) do host gửi xuống được
+        // gán thẳng vào this.p1/this.p2/this.bullets/... trong applyNetState(),
+        // nên render() vẫn chạy y hệt bình thường mà không cần sửa gì.
+        if (this.netRole === 'guest') {
+            this.sendNetInput();
+            return;
+        }
+
         if (!this.running || this.state === 'roundEnd' || this.state === 'matchEnd') return;
+
+        // ===== Host (online): áp input mới nhất nhận từ guest vào p2 =====
+        if (this.netRole === 'host' && this.remoteInput) {
+            this.p2.input = this.remoteInput;
+        }
         
         this.timer += dt;
         
@@ -215,6 +248,8 @@ export class Game {
             const action = p.update(dt, this);
             if (action === 'shoot') this.shootBullet(p);
             else if (action === 'bomb') this.throwBomb(p);
+            else if (action === 'medkit') spawnParticles(this, p.x, p.y, '#2ecc71', 10);
+            else if (action === 'empty') spawnParticles(this, p.x, p.y, '#888', 3);
             
             // Zone damage
             const dist = Math.hypot(p.x - this.zone.x, p.y - this.zone.y);
@@ -324,6 +359,98 @@ export class Game {
         }
         
         updateUI(this);
+
+        // ===== Host (online): gửi state xuống guest, giới hạn ~20 lần/giây =====
+        // để tránh spam WebSocket ở tickrate render 60fps.
+        if (this.netRole === 'host') {
+            this.netTickAcc += dt;
+            if (this.netTickAcc >= 0.05) {
+                this.netTickAcc = 0;
+                this.sendNetState();
+            }
+        }
+    }
+
+    // ===== Đóng gói state để gửi qua mạng (chỉ host gọi) =====
+    serializeState() {
+        const packPlayer = (p) => ({
+            x: p.x, y: p.y, angle: p.angle,
+            hp: p.hp, maxHp: p.maxHp, alive: p.alive,
+            isBot: p.isBot, shield: p.shield, speedBoost: p.speedBoost,
+            weapon: p.weapon, ammo: p.getAmmo(), reloading: p.reloading,
+            bombs: p.bombs, medkits: p.medkits,
+        });
+        return {
+            t: 'state',
+            p1: packPlayer(this.p1),
+            p2: packPlayer(this.p2),
+            bullets: this.bullets.map(b => ({ x: b.x, y: b.y, radius: b.radius, pierce: b.pierce })),
+            bombs: this.bombs.map(b => ({ x: b.x, y: b.y, radius: b.radius, timer: b.timer })),
+            items: this.items.map(it => ({ x: it.x, y: it.y, radius: it.radius, type: it.type, timer: it.timer })),
+            particles: this.particles.map(pt => ({ x: pt.x, y: pt.y, radius: pt.radius, color: pt.color, life: pt.life, maxLife: pt.maxLife })),
+            // Bản đồ được host tạo random khi initRound() — guest tự tạo bản đồ
+            // random RIÊNG của nó nên chắc chắn khác host. Phải gửi obstacles/
+            // bushes thật từ host xuống thì bản vẽ ở guest mới khớp va chạm
+            // thực tế đang diễn ra trên host (obstacles còn bị bom phá hủy
+            // giữa trận nên phải đồng bộ liên tục, không chỉ 1 lần lúc bắt đầu).
+            obstacles: this.obstacles,
+            bushes: this.bushes,
+            zone: { x: this.zone.x, y: this.zone.y, radius: this.zone.radius },
+            score1: this.score1, score2: this.score2, round: this.round,
+            state: this.state, timer: this.timer,
+            winnerId: this.winner ? this.winner.id : null,
+        };
+    }
+
+    sendNetState() {
+        if (this.netSendFn) this.netSendFn(this.serializeState());
+    }
+
+    // ===== Áp state nhận được từ host (chỉ guest gọi) =====
+    applyNetState(data) {
+        const applyPlayer = (p, d) => {
+            p.x = d.x; p.y = d.y; p.angle = d.angle;
+            p.hp = d.hp; p.maxHp = d.maxHp; p.alive = d.alive;
+            p.isBot = d.isBot; p.shield = d.shield; p.speedBoost = d.speedBoost;
+            p.weapon = d.weapon; p.ammo[d.weapon] = d.ammo; p.reloading = d.reloading;
+            p.bombs = d.bombs; p.medkits = d.medkits;
+        };
+        applyPlayer(this.p1, data.p1);
+        applyPlayer(this.p2, data.p2);
+        this.bullets = data.bullets;
+        this.bombs = data.bombs;
+        this.items = data.items;
+        this.particles = data.particles;
+        this.obstacles = data.obstacles;
+        this.bushes = data.bushes;
+        this.zone.x = data.zone.x; this.zone.y = data.zone.y; this.zone.radius = data.zone.radius;
+        this.score1 = data.score1; this.score2 = data.score2; this.round = data.round;
+        this.timer = data.timer;
+
+        if (data.state !== this.state) {
+            this.state = data.state;
+            if (this.state === 'roundEnd' || this.state === 'matchEnd') {
+                this.winner = data.winnerId === 1 ? this.p1 : (data.winnerId === 2 ? this.p2 : null);
+                if (this.winner) {
+                    if (this.state === 'matchEnd') showWinner(this);
+                    else showRoundWinner(this);
+                }
+            } else if (this.state === 'playing') {
+                this.dom.winnerMsg.style.display = 'none';
+                this.dom.restartBtn.style.display = 'none';
+            }
+        }
+        updateUI(this);
+    }
+
+    // ===== Gửi input local lên host (chỉ guest gọi, mỗi frame) =====
+    // Guest luôn điều khiển nhân vật P2 trên màn hình của chính họ — input
+    // bắt được qua bàn phím/joystick vẫn ghi vào this.p2.input như bình
+    // thường (không cần đổi code input), ở đây chỉ đọc lại và gửi đi.
+    sendNetInput() {
+        if (this.netSendFn) {
+            this.netSendFn({ t: 'input', input: { ...this.p2.input } });
+        }
     }
     
     shootBullet(player) {
@@ -392,15 +519,21 @@ export class Game {
             ak: 'ak'
         };
         if (weaponMap[item.type]) {
+            // addWeapon tự xử lý: chưa có -> thêm vào 1 trong 2 slot (thay
+            // khẩu đang cầm nếu đã đầy); đã có sẵn -> cộng đạn dự trữ.
             player.addWeapon(weaponMap[item.type]);
-            if (player.id === 1) {
-                this.dom.weaponDisplay.textContent = '🔫 ' + player.getWeapon().name;
-            }
             return;
         }
         switch (item.type) {
             case 'medkit':
-                player.hp = Math.min(player.maxHp, player.hp + CONSTANTS.MEDKIT_HEAL);
+                // Nhặt = cất vào túi (tối đa maxMedkits), dùng bằng phím/nút riêng
+                player.addMedkit(1);
+                break;
+            case 'ammo':
+                player.addAmmoReserve(Math.round(player.getWeapon().magSize * 1.5));
+                break;
+            case 'bomb':
+                player.addBomb(1);
                 break;
             case 'speed':
                 player.speedBoost = CONSTANTS.SPEED_DURATION;
@@ -516,6 +649,14 @@ export class Game {
             p1.input.weapon = true;
             setTimeout(() => p1.input.weapon = false, 100);
         }
+        if (key === 'r' || key === 'R') {
+            p1.input.reload = true;
+            setTimeout(() => p1.input.reload = false, 100);
+        }
+        if (key === 'f' || key === 'F') {
+            p1.input.medkit = true;
+            setTimeout(() => p1.input.medkit = false, 100);
+        }
         
         let dx2 = 0, dy2 = 0;
         if (keys['ArrowUp']) dy2 = -1;
@@ -534,6 +675,14 @@ export class Game {
         if (key === '/') {
             p2.input.weapon = true;
             setTimeout(() => p2.input.weapon = false, 100);
+        }
+        if (key === ';') {
+            p2.input.reload = true;
+            setTimeout(() => p2.input.reload = false, 100);
+        }
+        if (key === "'") {
+            p2.input.medkit = true;
+            setTimeout(() => p2.input.medkit = false, 100);
         }
     }
     
@@ -657,6 +806,8 @@ export class Game {
                 case 'medkit': color = '#ff3366'; symbol = '❤️'; break;
                 case 'speed': color = '#33ddff'; symbol = '⚡'; break;
                 case 'shield': color = '#66ff99'; symbol = '🛡'; break;
+                case 'ammo': color = '#ffcc00'; symbol = '📦'; break;
+                case 'bomb': color = '#ff8800'; symbol = '💣'; break;
                 case 'shotgun': color = '#ff8833'; symbol = '🔫'; break;
                 case 'rifle': color = '#33ff88'; symbol = '🔫'; break;
                 case 'sniper': color = '#ff33ff'; symbol = '🔫'; break;

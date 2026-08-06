@@ -84,7 +84,17 @@ export function createBushes(W, H) {
 }
 
 export function spawnItems(game, count) {
-    const types = ['medkit', 'speed', 'shield', 'shotgun', 'rifle', 'sniper', 'smg', 'ak'];
+    // ===== SỬA: cân bằng lại tỉ lệ rơi đồ cho hệ thống túi đồ giới hạn =====
+    // Đạn (ammo) và bình máu (medkit) rơi thường xuyên nhất vì tiêu hao
+    // liên tục trong trận. Súng rơi hiếm hơn vì mỗi người chỉ mang tối đa
+    // 2 khẩu, nhặt thêm là phải đánh đổi khẩu đang cầm.
+    const types = [
+        'medkit', 'medkit',
+        'ammo', 'ammo', 'ammo',
+        'bomb', 'bomb',
+        'speed', 'shield',
+        'shotgun', 'rifle', 'sniper', 'smg', 'ak'
+    ];
     for (let i = 0; i < count; i++) {
         const type = types[Math.floor(Math.random() * types.length)];
         let x, y, valid;
@@ -130,6 +140,55 @@ export function checkCollision(x, y, radius, obstacles) {
         }
     }
     return false;
+}
+
+// ===== SỬA: đẩy nhân vật ra khỏi vật cản thay vì chỉ chặn di chuyển =====
+// Nếu circle đang đè lên rectangle, trả về vị trí đã đẩy ra ngoài theo
+// hướng xuyên thấu ngắn nhất (minimum translation vector). Chạy vài vòng
+// lặp để xử lý trường hợp kẹt giữa 2-3 vật cản cùng lúc (góc tường).
+export function resolveObstacleCollision(x, y, radius, obstacles) {
+    let px = x;
+    let py = y;
+
+    for (let pass = 0; pass < 4; pass++) {
+        let resolved = true;
+
+        for (const o of obstacles) {
+            const nearX = Math.max(o.x, Math.min(px, o.x + o.w));
+            const nearY = Math.max(o.y, Math.min(py, o.y + o.h));
+            let dx = px - nearX;
+            let dy = py - nearY;
+            let dist = Math.hypot(dx, dy);
+
+            if (dist < radius) {
+                resolved = false;
+
+                if (dist === 0) {
+                    // Tâm nhân vật rơi đúng vào trong rectangle (spawn/knockback lỗi):
+                    // đẩy ra theo trục có khoảng cách tới mép gần nhất ngắn nhất.
+                    const distLeft = px - o.x;
+                    const distRight = (o.x + o.w) - px;
+                    const distTop = py - o.y;
+                    const distBottom = (o.y + o.h) - py;
+                    const minEdge = Math.min(distLeft, distRight, distTop, distBottom);
+
+                    if (minEdge === distLeft) px = o.x - radius;
+                    else if (minEdge === distRight) px = o.x + o.w + radius;
+                    else if (minEdge === distTop) py = o.y - radius;
+                    else py = o.y + o.h + radius;
+                } else {
+                    // Đẩy ra dọc theo vector từ mép gần nhất -> tâm nhân vật
+                    const overlap = radius - dist;
+                    px += (dx / dist) * overlap;
+                    py += (dy / dist) * overlap;
+                }
+            }
+        }
+
+        if (resolved) break;
+    }
+
+    return { x: px, y: py };
 }
 
 export function rectCircleCollision(rx, ry, rw, rh, cx, cy, cr) {
