@@ -5,6 +5,8 @@ import { getShopItems, buySkin, equipSkin, buyStatBoost, SHOP_ITEMS, STAT_ITEMS 
 import { getLeaderboard } from './js/leaderboard.js';
 import { getInventory } from './js/inventory.js';
 import { netConnect, netOn, netSend, netCreateRoom, netJoinRoom, netDisconnect, netIsConnected } from './js/net.js';
+import { loadKeymap, saveKeymap, resetKeymap, ACTION_LABELS } from './js/keymap.js';
+import { loadButtonOffsets, resetButtonOffsets, enableDragMode, disableDragMode, isDragModeOn } from './js/controls-custom.js';
 // ===== SỬA: settings.js -> setting.js =====
 import { getSettings, setSetting, applySettings } from './js/setting.js';
 
@@ -77,7 +79,29 @@ function updateMenuUI() {
 }
 
 // ===== MENU EVENTS =====
+// ===== Hiện đúng cụm điều khiển theo vai trò (chỉ áp dụng cho Online) =====
+// Local/Bot vẫn hiện đủ cả 2 cụm P1+P2 như cũ (2 người chung 1 máy).
+// Online: mỗi máy chỉ nên thấy cụm điều khiển của CHÍNH MÌNH — tránh
+// trường hợp guest bấm nhầm sang cụm P1 (không có tác dụng gì vì chỉ
+// input của P2 mới được gửi lên host).
+function setOnlineControlVisibility(role) {
+    const p1Group = document.querySelector('.ctrl-group.p1');
+    const p2Group = document.querySelector('.ctrl-group.p2');
+    if (!p1Group || !p2Group) return;
+    if (role === 'host') {
+        p1Group.style.display = 'flex';
+        p2Group.style.display = 'none';
+    } else if (role === 'guest') {
+        p1Group.style.display = 'none';
+        p2Group.style.display = 'flex';
+    } else {
+        p1Group.style.display = 'flex';
+        p2Group.style.display = 'flex';
+    }
+}
+
 document.getElementById('btnLocal').addEventListener('click', () => {
+    setOnlineControlVisibility(null);
     game.start('local');
     menu.style.display = 'none';
     controls.style.display = 'flex';
@@ -85,6 +109,7 @@ document.getElementById('btnLocal').addEventListener('click', () => {
 });
 
 document.getElementById('btnBot').addEventListener('click', () => {
+    setOnlineControlVisibility(null);
     game.start('bot');
     menu.style.display = 'none';
     controls.style.display = 'flex';
@@ -119,11 +144,17 @@ const onlineWaitMsg = document.getElementById('onlineWaitMsg');
 const btnStartOnline = document.getElementById('btnStartOnline');
 const onlineServerUrlInput = document.getElementById('onlineServerUrl');
 
+// Địa chỉ relay server mặc định (server đã deploy sẵn của bạn) — người dùng
+// vẫn có thể sửa lại nếu muốn dùng server khác.
+const DEFAULT_RELAY_URL = 'wss://survival-arena-server-1.onrender.com';
+
 // Nhớ lại địa chỉ server đã dùng lần trước cho tiện (chỉ lưu trên máy này)
 try {
     const savedUrl = localStorage.getItem('survivearena_relay_url');
-    if (savedUrl) onlineServerUrlInput.value = savedUrl;
-} catch {}
+    onlineServerUrlInput.value = savedUrl || DEFAULT_RELAY_URL;
+} catch {
+    onlineServerUrlInput.value = DEFAULT_RELAY_URL;
+}
 
 function setOnlineStatus(msg, isError) {
     onlineStatus.textContent = msg || '';
@@ -191,6 +222,7 @@ function startOnlineMatch(role) {
     game.netSendFn = netSend;
     game.p2.isBot = false;
     document.getElementById('onlinePopup').style.display = 'none';
+    setOnlineControlVisibility(role);
     game.start('online');
     menu.style.display = 'none';
     controls.style.display = 'flex';
@@ -206,6 +238,7 @@ function leaveOnlineMatch(reason) {
     game.remoteInput = null;
     game.running = false;
     netDisconnect();
+    setOnlineControlVisibility(null);
     controls.style.display = 'none';
     menu.style.display = 'flex';
     document.getElementById('onlinePopup').style.display = 'none';
@@ -478,7 +511,29 @@ function openSettings() {
 function renderSettings() {
     const settings = getSettings();
     const content = document.getElementById('settingsContent');
-    
+    const km = game.keymap;
+
+    function keyLabel(k) {
+        if (k === ' ') return 'Space';
+        return k;
+    }
+
+    function rebindRow(side, action) {
+        const current = km[side][action];
+        const rowId = `bind-${side}-${action}`;
+        return `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
+                <span style="font-size:12px; color:#ccc;">${ACTION_LABELS[action]}</span>
+                <button id="${rowId}" data-side="${side}" data-action="${action}" class="rebind-btn"
+                        style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; min-width:56px; cursor:pointer;">
+                    ${keyLabel(current)}
+                </button>
+            </div>
+        `;
+    }
+
+    const actions = ['up', 'down', 'left', 'right', 'shoot', 'bomb', 'weapon', 'reload', 'medkit'];
+
     content.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -513,6 +568,37 @@ function renderSettings() {
                     </span>
                 </label>
             </div>
+
+            <div style="margin-top:6px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="font-size:13px; color:#fdcb6e; margin-bottom:4px;">⌨️ Đổi phím — P1</div>
+                ${actions.map(a => rebindRow('p1', a)).join('')}
+            </div>
+            <div style="margin-top:4px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="font-size:13px; color:#fdcb6e; margin-bottom:4px;">⌨️ Đổi phím — P2</div>
+                ${actions.map(a => rebindRow('p2', a)).join('')}
+            </div>
+            <div style="text-align:center; margin-top:4px;">
+                <button id="btnResetKeymap"
+                        style="background:rgba(255,50,50,0.15); border:1px solid rgba(255,50,50,0.3); color:#ff8080; padding:5px 14px; border-radius:8px; cursor:pointer; font-size:12px;">
+                    ↺ Đặt lại phím mặc định
+                </button>
+            </div>
+
+            <div style="margin-top:6px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="font-size:13px; color:#fdcb6e; margin-bottom:6px;">🖐️ Vị trí nút (mobile)</div>
+                <div style="font-size:11px; color:#888; margin-bottom:8px;">Bật chế độ chỉnh, kéo nút bắn/bom/... tới vị trí bạn muốn, rồi bấm "Xong" để lưu.</div>
+                <div style="display:flex; gap:8px; justify-content:center;">
+                    <button id="btnToggleDrag"
+                            style="background:rgba(78,205,196,0.2); border:1px solid rgba(78,205,196,0.4); color:#4ecdc4; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px;">
+                        ${isDragModeOn() ? '✅ Xong, lưu vị trí' : '🖐️ Chỉnh vị trí nút'}
+                    </button>
+                    <button id="btnResetPositions"
+                            style="background:rgba(255,50,50,0.15); border:1px solid rgba(255,50,50,0.3); color:#ff8080; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:12px;">
+                        ↺ Đặt lại vị trí
+                    </button>
+                </div>
+            </div>
+
             <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
                 <button onclick="localStorage.clear(); alert('Đã xóa dữ liệu!'); location.reload();" 
                         style="background:rgba(255,50,50,0.2); border:1px solid rgba(255,50,50,0.3); color:#ff6b6b; padding:6px 16px; border-radius:8px; cursor:pointer; font-size:13px;">
@@ -525,6 +611,50 @@ function renderSettings() {
             </div>
         </div>
     `;
+
+    // ===== Wire nút đổi phím =====
+    content.querySelectorAll('.rebind-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const side = btn.dataset.side;
+            const action = btn.dataset.action;
+            btn.textContent = 'Bấm phím...';
+            btn.style.color = '#fdcb6e';
+
+            const captureKey = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newKey = e.key;
+                km[side][action] = newKey === 'Escape' ? km[side][action] : newKey; // Esc = hủy
+                saveKeymap(km);
+                game.setKeymap(km);
+                document.removeEventListener('keydown', captureKey, true);
+                renderSettings();
+            };
+            document.addEventListener('keydown', captureKey, true);
+        });
+    });
+
+    // ===== Wire reset phím =====
+    document.getElementById('btnResetKeymap').addEventListener('click', () => {
+        const fresh = resetKeymap();
+        game.setKeymap(fresh);
+        renderSettings();
+    });
+
+    // ===== Wire chỉnh vị trí nút =====
+    document.getElementById('btnToggleDrag').addEventListener('click', () => {
+        if (isDragModeOn()) {
+            disableDragMode();
+        } else {
+            enableDragMode();
+        }
+        renderSettings();
+    });
+
+    document.getElementById('btnResetPositions').addEventListener('click', () => {
+        resetButtonOffsets();
+        alert('Đã đặt lại vị trí nút mặc định.');
+    });
 }
 
 // ===== UPGRADE POPUP =====
@@ -652,6 +782,7 @@ function gameLoop(time) {
 // ===== INIT =====
 updateMenuUI();
 applySettings();
+applyButtonOffsets();
 requestAnimationFrame(gameLoop);
 
 console.log('🎮 Survive Arena loaded!');

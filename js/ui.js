@@ -31,7 +31,9 @@ export function showRoundWinner(game) {
     game.dom.winnerMsg.textContent = `🏆 ${name} thắng round!`;
     game.dom.winnerMsg.style.display = 'block';
     game.dom.restartBtn.style.display = 'block';
-    game.dom.restartBtn.textContent = '⏭️ Round tiếp';
+    game.dom.restartBtn.textContent = game.netRole
+        ? '⏭️ Round tiếp (tự động ~4s)'
+        : '⏭️ Round tiếp';
 }
 
 export function showWinner(game) {

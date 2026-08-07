@@ -5,8 +5,13 @@
 // chỉ gửi input lên và vẽ lại theo state nhận được — không tự chạy vật lý,
 // nhờ vậy tránh được lệch trạng thái (desync) giữa 2 máy.
 
+export const NET_DEBUG = true; // đổi thành false để tắt log chẩn đoán
+
 let socket = null;
 let handlers = {};
+let lastInputRecvLog = 0;
+let lastStateRecvLog = 0;
+let lastInputSendLog = 0;
 
 export function netConnect(url) {
     return new Promise((resolve, reject) => {
@@ -18,6 +23,7 @@ export function netConnect(url) {
         }
         const onOpenOnce = () => {
             socket.removeEventListener('error', onErrorOnce);
+            if (NET_DEBUG) console.log('[net] đã kết nối tới', url);
             resolve();
         };
         const onErrorOnce = (e) => {
@@ -34,11 +40,22 @@ export function netConnect(url) {
             } catch {
                 return;
             }
+            if (NET_DEBUG) {
+                const now = performance.now();
+                if (msg.t === 'state') {
+                    if (now - lastStateRecvLog > 1000) { lastStateRecvLog = now; console.log('[net] đang NHẬN state đều đặn (host->guest OK), p2 x=', msg.p2 && msg.p2.x); }
+                } else if (msg.t === 'input') {
+                    if (now - lastInputRecvLog > 1000) { lastInputRecvLog = now; console.log('[net] đang NHẬN input đều đặn (guest->host OK), dx=', msg.input && msg.input.dx, 'dy=', msg.input && msg.input.dy); }
+                } else {
+                    console.log('[net] nhận:', msg.t, msg);
+                }
+            }
             const fn = handlers[msg.t];
             if (fn) fn(msg);
         });
 
         socket.addEventListener('close', () => {
+            if (NET_DEBUG) console.log('[net] socket đóng');
             const fn = handlers['disconnected'];
             if (fn) fn();
         });
@@ -51,7 +68,17 @@ export function netOn(type, fn) {
 
 export function netSend(obj) {
     if (socket && socket.readyState === WebSocket.OPEN) {
+        if (NET_DEBUG) {
+            const now = performance.now();
+            if (obj.t === 'input') {
+                if (now - lastInputSendLog > 1000) { lastInputSendLog = now; console.log('[net] đang GỬI input đều đặn, dx=', obj.input.dx, 'dy=', obj.input.dy); }
+            } else {
+                console.log('[net] gửi:', obj.t, obj);
+            }
+        }
         socket.send(JSON.stringify(obj));
+    } else if (NET_DEBUG) {
+        console.warn('[net] KHÔNG gửi được (socket chưa mở):', obj.t, 'readyState=', socket ? socket.readyState : 'null');
     }
 }
 

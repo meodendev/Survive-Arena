@@ -589,3 +589,20 @@ canvas {
     background: rgba(255,255,255,0.2);
     border-radius: 4px;
 }
+
+/* ===== Chế độ chỉnh vị trí nút (kéo-thả) ===== */
+.control-edit-mode .action-btn {
+    outline: 2px dashed #4ecdc4;
+    outline-offset: 3px;
+    animation: dragPulse 1.2s ease-in-out infinite;
+    cursor: grab;
+    touch-action: none;
+}
+.control-edit-mode .action-btn:active {
+    cursor: grabbing;
+    animation: none;
+}
+@keyframes dragPulse {
+    0%, 100% { outline-color: #4ecdc4; }
+    50% { outline-color: #ffdd44; }
+}

@@ -5,6 +5,7 @@ import { updateUI, showWinner, showRoundWinner } from './ui.js';
 import { spawnParticles } from './particle.js';
 import { addCoins, addExp, loadData, saveData, getStats } from './save.js';
 import { addLeaderboardEntry } from './leaderboard.js';
+import { loadKeymap } from './keymap.js';
 
 export const W = 900;
 export const H = 500;
@@ -58,6 +59,9 @@ export class Game {
         this.netSendFn = null; // hàm gửi tin nhắn qua WebSocket, do main.js gán vào
         this.remoteInput = null; // input mới nhất nhận từ guest (phía host dùng)
         this.netTickAcc = 0; // tích lũy thời gian để throttle tần suất gửi state
+
+        // Bàn phím tùy chỉnh (rebind) — nạp từ localStorage, mặc định WASD/Arrow
+        this.keymap = loadKeymap();
         
         // Lấy stats từ save
         const stats = getStats();
@@ -180,6 +184,7 @@ export class Game {
     }
     
     restart() {
+        clearTimeout(this._autoNextRoundTimer);
         if (this.state === 'matchEnd') {
             this.score1 = 0;
             this.score2 = 0;
@@ -209,6 +214,10 @@ export class Game {
         // ===== Host (online): áp input mới nhất nhận từ guest vào p2 =====
         if (this.netRole === 'host' && this.remoteInput) {
             this.p2.input = this.remoteInput;
+            if (this._lastApplyLog === undefined || performance.now() - this._lastApplyLog > 1000) {
+                this._lastApplyLog = performance.now();
+                console.log('[game] host đang áp input của guest vào p2:', this.remoteInput);
+            }
         }
         
         this.timer += dt;
@@ -587,6 +596,19 @@ export class Game {
                 showWinner(this);
             } else {
                 showRoundWinner(this);
+                // ===== Online: tự động chuyển round tiếp theo sau vài giây =====
+                // Local/Bot vẫn giữ nguyên hành vi cũ (bấm nút thủ công), vì
+                // 2 người chung 1 máy có thể cần thời gian đổi tay/chuẩn bị.
+                // Online thì bấm nút qua mạng dễ bị hiểu nhầm là "không hoạt
+                // động" nếu 1 trong 2 bên quên bấm, nên tự chuyển cho mượt.
+                if (this.netRole === 'host') {
+                    clearTimeout(this._autoNextRoundTimer);
+                    this._autoNextRoundTimer = setTimeout(() => {
+                        if (this.netRole === 'host' && this.state === 'roundEnd') {
+                            this.restart();
+                        }
+                    }, 4000);
+                }
             }
             updateUI(this);
         }
@@ -626,61 +648,84 @@ export class Game {
         setTimeout(() => msg.remove(), 3000);
     }
     
+    setKeymap(keymap) {
+        this.keymap = keymap;
+    }
+
+    // So khớp phím đang giữ với 1 phím đã bind — không phân biệt hoa/thường
+    // với phím chữ cái đơn (vì keys{} lưu theo e.key gốc, có thể hoa hoặc
+    // thường tùy Shift/CapsLock), còn phím đặc biệt (ArrowUp, Enter...) so
+    // khớp chính xác.
+    _isBoundKeyDown(keys, boundKey) {
+        if (keys[boundKey]) return true;
+        if (boundKey.length === 1) {
+            return !!(keys[boundKey.toLowerCase()] || keys[boundKey.toUpperCase()]);
+        }
+        return false;
+    }
+
+    _isBoundKeyMatch(key, boundKey) {
+        if (key === boundKey) return true;
+        if ((key === ' ' && boundKey === 'Space') || (key === 'Space' && boundKey === ' ')) return true;
+        if (boundKey.length === 1 && key.length === 1) {
+            return key.toLowerCase() === boundKey.toLowerCase();
+        }
+        return false;
+    }
+
+    _computeMoveAxis(keys, km) {
+        let dx = 0, dy = 0;
+        if (this._isBoundKeyDown(keys, km.up)) dy = -1;
+        if (this._isBoundKeyDown(keys, km.down)) dy = 1;
+        if (this._isBoundKeyDown(keys, km.left)) dx = -1;
+        if (this._isBoundKeyDown(keys, km.right)) dx = 1;
+        return { dx, dy };
+    }
+
     handleKeyDown(key, keys) {
         const p1 = this.p1;
         const p2 = this.p2;
         if (!this.running) return;
-        
-        let dx1 = 0, dy1 = 0;
-        if (keys['w'] || keys['W']) dy1 = -1;
-        if (keys['s'] || keys['S']) dy1 = 1;
-        if (keys['a'] || keys['A']) dx1 = -1;
-        if (keys['d'] || keys['D']) dx1 = 1;
-        const len1 = Math.hypot(dx1, dy1);
+        const km = this.keymap;
+
+        const m1 = this._computeMoveAxis(keys, km.p1);
+        const len1 = Math.hypot(m1.dx, m1.dy);
         if (len1 > 0) {
-            p1.input.dx = dx1 / len1;
-            p1.input.dy = dy1 / len1;
+            p1.input.dx = m1.dx / len1;
+            p1.input.dy = m1.dy / len1;
         }
-        if (key === ' ' || key === 'Space') {
-            p1.input.shoot = true;
-        }
-        if (key === 'q' || key === 'Q') p1.input.bomb = true;
-        if (key === 'e' || key === 'E') {
+        if (this._isBoundKeyMatch(key, km.p1.shoot)) p1.input.shoot = true;
+        if (this._isBoundKeyMatch(key, km.p1.bomb)) p1.input.bomb = true;
+        if (this._isBoundKeyMatch(key, km.p1.weapon)) {
             p1.input.weapon = true;
             setTimeout(() => p1.input.weapon = false, 100);
         }
-        if (key === 'r' || key === 'R') {
+        if (this._isBoundKeyMatch(key, km.p1.reload)) {
             p1.input.reload = true;
             setTimeout(() => p1.input.reload = false, 100);
         }
-        if (key === 'f' || key === 'F') {
+        if (this._isBoundKeyMatch(key, km.p1.medkit)) {
             p1.input.medkit = true;
             setTimeout(() => p1.input.medkit = false, 100);
         }
-        
-        let dx2 = 0, dy2 = 0;
-        if (keys['ArrowUp']) dy2 = -1;
-        if (keys['ArrowDown']) dy2 = 1;
-        if (keys['ArrowLeft']) dx2 = -1;
-        if (keys['ArrowRight']) dx2 = 1;
-        const len2 = Math.hypot(dx2, dy2);
+
+        const m2 = this._computeMoveAxis(keys, km.p2);
+        const len2 = Math.hypot(m2.dx, m2.dy);
         if (len2 > 0) {
-            p2.input.dx = dx2 / len2;
-            p2.input.dy = dy2 / len2;
+            p2.input.dx = m2.dx / len2;
+            p2.input.dy = m2.dy / len2;
         }
-        if (key === 'Enter') {
-            p2.input.shoot = true;
-        }
-        if (key === '.') p2.input.bomb = true;
-        if (key === '/') {
+        if (this._isBoundKeyMatch(key, km.p2.shoot)) p2.input.shoot = true;
+        if (this._isBoundKeyMatch(key, km.p2.bomb)) p2.input.bomb = true;
+        if (this._isBoundKeyMatch(key, km.p2.weapon)) {
             p2.input.weapon = true;
             setTimeout(() => p2.input.weapon = false, 100);
         }
-        if (key === ';') {
+        if (this._isBoundKeyMatch(key, km.p2.reload)) {
             p2.input.reload = true;
             setTimeout(() => p2.input.reload = false, 100);
         }
-        if (key === "'") {
+        if (this._isBoundKeyMatch(key, km.p2.medkit)) {
             p2.input.medkit = true;
             setTimeout(() => p2.input.medkit = false, 100);
         }
@@ -690,35 +735,28 @@ export class Game {
         const p1 = this.p1;
         const p2 = this.p2;
         if (!this.running) return;
-        
-        if (key === ' ' || key === 'Space') p1.input.shoot = false;
-        if (key === 'q' || key === 'Q') p1.input.bomb = false;
-        if (key === 'Enter') p2.input.shoot = false;
-        if (key === '.') p2.input.bomb = false;
-        
-        let dx1 = 0, dy1 = 0;
-        if (keys['w'] || keys['W']) dy1 = -1;
-        if (keys['s'] || keys['S']) dy1 = 1;
-        if (keys['a'] || keys['A']) dx1 = -1;
-        if (keys['d'] || keys['D']) dx1 = 1;
-        const len1 = Math.hypot(dx1, dy1);
+        const km = this.keymap;
+
+        if (this._isBoundKeyMatch(key, km.p1.shoot)) p1.input.shoot = false;
+        if (this._isBoundKeyMatch(key, km.p1.bomb)) p1.input.bomb = false;
+        if (this._isBoundKeyMatch(key, km.p2.shoot)) p2.input.shoot = false;
+        if (this._isBoundKeyMatch(key, km.p2.bomb)) p2.input.bomb = false;
+
+        const m1 = this._computeMoveAxis(keys, km.p1);
+        const len1 = Math.hypot(m1.dx, m1.dy);
         if (len1 > 0) {
-            p1.input.dx = dx1 / len1;
-            p1.input.dy = dy1 / len1;
+            p1.input.dx = m1.dx / len1;
+            p1.input.dy = m1.dy / len1;
         } else {
             p1.input.dx = 0;
             p1.input.dy = 0;
         }
-        
-        let dx2 = 0, dy2 = 0;
-        if (keys['ArrowUp']) dy2 = -1;
-        if (keys['ArrowDown']) dy2 = 1;
-        if (keys['ArrowLeft']) dx2 = -1;
-        if (keys['ArrowRight']) dx2 = 1;
-        const len2 = Math.hypot(dx2, dy2);
+
+        const m2 = this._computeMoveAxis(keys, km.p2);
+        const len2 = Math.hypot(m2.dx, m2.dy);
         if (len2 > 0) {
-            p2.input.dx = dx2 / len2;
-            p2.input.dy = dy2 / len2;
+            p2.input.dx = m2.dx / len2;
+            p2.input.dy = m2.dy / len2;
         } else {
             p2.input.dx = 0;
             p2.input.dy = 0;

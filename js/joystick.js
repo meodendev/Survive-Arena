@@ -1,3 +1,5 @@
+import { dragModeActive } from './controls-custom.js';
+
 export function setupJoystick(elementId, knobId, player) {
     const el = document.getElementById(elementId);
     const knob = document.getElementById(knobId);
@@ -113,6 +115,7 @@ export function setupButton(btnId, player, key) {
     
     // ===== TOUCH EVENTS (iPhone compatible) =====
     el.addEventListener('touchstart', (e) => {
+        if (dragModeActive) return;
         e.preventDefault();
         e.stopPropagation();
         if (key === 'speed' || key === 'weapon' || key === 'reload' || key === 'medkit') {
@@ -143,6 +146,7 @@ export function setupButton(btnId, player, key) {
     
     // ===== MOUSE EVENTS (Desktop) =====
     el.addEventListener('mousedown', (e) => {
+        if (dragModeActive) return;
         e.preventDefault();
         if (key === 'speed' || key === 'weapon' || key === 'reload' || key === 'medkit') {
             player.input[key] = true;
