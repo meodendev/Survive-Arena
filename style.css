@@ -1,3 +1,8 @@
+html, body {
+    overscroll-behavior: none;
+    position: fixed;
+    inset: 0;
+}
 * {
     margin: 0;
     padding: 0;
@@ -12,10 +17,51 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    height: 100dvh; /* fix bounce/scroll trên mobile — vh cũ không tính thanh địa chỉ trình duyệt */
     width: 100vw;
     overflow: hidden;
     font-family: 'Segoe UI', Arial, sans-serif;
     touch-action: none;
+}
+
+/* ===== THÔNG BÁO XOAY NGANG MÀN HÌNH ===== */
+/* Game chỉ được thiết kế cho landscape (ngang) — khi điện thoại đang dọc,
+   che toàn bộ game bằng thông báo rõ ràng thay vì để game hiện méo/co nhỏ
+   trông như bị lỗi không load được. */
+#rotateOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #0a0a15;
+    color: #fff;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    gap: 16px;
+}
+#rotateOverlay .rotate-icon {
+    font-size: 56px;
+    animation: rotateHint 1.6s ease-in-out infinite;
+}
+#rotateOverlay .rotate-text {
+    font-size: 16px;
+    color: #ccc;
+    max-width: 280px;
+}
+@keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+}
+@media (orientation: portrait) {
+    #rotateOverlay {
+        display: flex;
+    }
+    #gameWrapper {
+        display: none;
+    }
 }
 
 /* ===== LANDSCAPE MODE ===== */
@@ -23,7 +69,9 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     max-width: 100vh;
+    max-width: 100dvh;
     max-height: 100vw;
     background: #1a1a2e;
     overflow: hidden;
@@ -58,6 +106,19 @@ canvas {
     justify-content: center;
     align-items: center;
     padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+#menu::-webkit-scrollbar {
+    width: 4px;
+}
+#menu::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+}
+#menu::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
 }
 #menu h1 {
     color: #ff6b6b;
@@ -450,7 +511,9 @@ canvas {
 @media (min-aspect-ratio: 16/9) {
     #gameWrapper {
         width: calc(100vh * 16 / 9);
+        width: calc(100dvh * 16 / 9);
         height: 100vh;
+        height: 100dvh;
     }
 }
 
@@ -473,6 +536,26 @@ canvas {
     }
     #controls {
         height: 50%;
+    }
+}
+
+@media (max-height: 500px) {
+    #menu h1 {
+        font-size: clamp(18px, 3vw, 28px);
+        margin-bottom: 2px;
+    }
+    #menu .subtitle {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    .menu-btn {
+        padding: 6px clamp(16px, 3vw, 40px);
+        font-size: clamp(12px, 1.6vw, 16px);
+        margin: 3px 0;
+    }
+    .controls-hint {
+        font-size: 10px;
+        margin-top: 6px;
     }
 }
 
